@@ -1,61 +1,46 @@
-# HANOTI+
+# Hanouti 🏪
 
-A modern full-stack web and mobile application built with Expo (React Native) and Node.js. 
-This repository contains a robust authentication system including standard login, Google OAuth integration, and a complete password reset flow.
+**Hanouti** (meaning "My Shop" in Arabic) is a digital credit notebook designed specifically for merchants. It aims to replace the traditional paper credit notebooks ("carnet de crédit") with a simple, modern, and reliable digital solution.
 
-## 🚀 Features
+## Features ✨
 
-* **Authentication System**
-  * Secure standard Email & Password login (bcrypt password hashing).
-  * **Google OAuth Login** via `expo-auth-session` and `google-auth-library`.
-  * Persistent user sessions across application reloads using `AsyncStorage`.
-* **Password Recovery**
-  * Complete 3-step Forgot Password flow.
-  * NodeMailer SMTP integration for sending 6-digit verification codes.
-* **Modern UI/UX**
-  * Built with React Native & Expo.
-  * Reusable cross-platform UI components (e.g., beautiful custom `ConfirmDialog` modals).
-  * Seamless inline form validation and error handling.
+*   **Merchant Dashboard**: Get a real-time overview of your business health, including total outstanding credits, payments received this month, and the number of active clients.
+*   **Manage Clients**: Easily add clients to your digital notebook.
+*   **Track Credits & Payments**: Record new credits given to clients and log payments received. The app automatically calculates the remaining balance for each client.
+*   **Transaction History**: View a clear history of all credits and payments across your store.
+*   **SMS Reminders**: (Coming Soon) Send automated SMS reminders to clients with overdue balances.
+*   **Data Export**: (Coming Soon) Export your digital notebook to PDF or Excel for safe keeping and accounting.
+*   **Multi-language Support**: Available in French, English, and Arabic.
+*   **Dark Mode**: Full support for dark and light themes, adapting to the merchant's preference.
 
-## 📁 Project Structure
+## Tech Stack 🛠️
 
-* `/frontend` - The Expo React Native application (Web, iOS, Android compatible).
-* `/backend` - The Node.js Express server and API endpoints.
+*   **Frontend**: React Native (Expo) - Works seamlessly on Web, iOS, and Android.
+*   **Backend**: Node.js, Express
+*   **Authentication**: Custom JWT authentication and Google OAuth.
+*   **Database**: (Configured via backend)
 
-## 🛠 Setup & Installation
+## Getting Started 🚀
 
-### 1. Backend Setup
+### Prerequisites
+- Node.js installed
+- Expo CLI installed
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up your `.env` file (refer to the code for required keys like `DB_HOST`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, and `SMTP` configs).
-4. Start the server:
-   ```bash
-   node server.js
-   ```
+### Run the Backend
+```bash
+cd backend
+npm install
+node server.js
+```
+The backend will run on `http://localhost:3000`.
 
-### 2. Frontend Setup
+### Run the Frontend
+```bash
+cd frontend
+npm install
+npm start
+```
+This will start the Expo development server. You can view the app in your browser, or on a physical device using the Expo Go app.
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Expo development server:
-   ```bash
-   npx expo start
-   ```
-
-## 🔐 Security Notes
-
-- This project uses JWT (JSON Web Tokens) for managing API authorization.
-- Passwords are encrypted before being stored in the database.
+---
+*Built to make credit management simpler, faster, and more organized.*

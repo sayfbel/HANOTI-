@@ -17,6 +17,7 @@
     "express": "^5.2.1",
     "google-auth-library": "^11.1.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
     "mysql2": "^3.24.4",
     "nodemailer": "^10.0.10"
   }

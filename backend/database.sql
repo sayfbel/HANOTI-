@@ -4,9 +4,18 @@ USE hanoti_db;
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
+  custom_id VARCHAR(100) UNIQUE,
   password VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  birthday DATE,
+  phone_number VARCHAR(20),
   role VARCHAR(50) DEFAULT 'user',
   abonnement VARCHAR(50) DEFAULT 'standar',
+  followers_count INT DEFAULT 0,
+  following_count INT DEFAULT 0,
+  streak INT DEFAULT 0,
+  avatar_url VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Checkbox from 'expo-checkbox';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import { Feather } from '@expo/vector-icons';
+import { Feather, AntDesign } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/themed-text';
+import { useLanguage } from '@/context/LanguageContext';
 
 // This is critical for web: it tells the popup window to send the auth result 
 // back to the main window and then close itself.
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { t } = useLanguage();
 
   // Set up Google Auth
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -59,6 +61,9 @@ export default function LoginScreen() {
         if (data.user) {
           await AsyncStorage.setItem('user', JSON.stringify(data.user));
         }
+        if (data.token) {
+          await AsyncStorage.setItem('token', data.token);
+        }
         router.replace('/(tabs)/dashboard');
       } else {
         setErrorMsg(data.message || 'Error connecting to server.');
@@ -73,7 +78,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setErrorMsg('');
     if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+      setErrorMsg(t('login.err.emptyFields'));
       return;
     }
     
@@ -91,13 +96,16 @@ export default function LoginScreen() {
         if (data.user) {
           await AsyncStorage.setItem('user', JSON.stringify(data.user));
         }
+        if (data.token) {
+          await AsyncStorage.setItem('token', data.token);
+        }
         // If rememberMe is true, you could persist the token to AsyncStorage here
         router.replace('/(tabs)/dashboard');
       } else {
-        setErrorMsg(data.message || 'Invalid credentials');
+        setErrorMsg(data.message || t('login.err.network'));
       }
     } catch (error) {
-      setErrorMsg('Could not connect to the server. Make sure your backend is running.');
+      setErrorMsg(t('login.err.network'));
     } finally {
       setLoading(false);
     }
@@ -107,8 +115,8 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ThemedText style={styles.title}>Welcome Back</ThemedText>
-          <ThemedText style={styles.subtitle}>Sign in to your account</ThemedText>
+          <ThemedText style={styles.title}>{t('login.welcomeBack')}</ThemedText>
+          <ThemedText style={styles.subtitle}>{t('login.signInSubtitle')}</ThemedText>
         </View>
 
         <View style={styles.formContainer}>
@@ -122,7 +130,7 @@ export default function LoginScreen() {
           <View style={styles.inputGroup}>
             <TextInput 
               style={styles.input}
-              placeholder="Email address"
+              placeholder={t('login.emailPlaceholder')}
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -134,7 +142,7 @@ export default function LoginScreen() {
           <View style={[styles.inputGroup, styles.passwordGroup]}>
             <TextInput 
               style={[styles.input, styles.passwordInput]}
-              placeholder="Password"
+              placeholder={t('login.passwordPlaceholder')}
               placeholderTextColor="#9CA3AF"
               secureTextEntry={!showPassword}
               value={password}
@@ -157,11 +165,11 @@ export default function LoginScreen() {
                 color={rememberMe ? '#054687' : undefined}
                 style={styles.checkbox}
               />
-              <ThemedText style={styles.rememberText}>Remember me</ThemedText>
+              <ThemedText style={styles.rememberText}>{t('login.rememberMe')}</ThemedText>
             </View>
             <Link href="/forgot-password" asChild>
               <Pressable>
-                <ThemedText style={styles.forgotText}>Forgot password?</ThemedText>
+                <ThemedText style={styles.forgotText}>{t('login.forgotPassword')}</ThemedText>
               </Pressable>
             </Link>
           </View>
@@ -177,13 +185,13 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <ThemedText style={styles.loginButtonText}>Connexion</ThemedText>
+              <ThemedText style={styles.loginButtonText}>{t('login.connexion')}</ThemedText>
             )}
           </Pressable>
 
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
-            <ThemedText style={styles.dividerText}>or</ThemedText>
+            <ThemedText style={styles.dividerText}>{t('login.or')}</ThemedText>
             <View style={styles.dividerLine} />
           </View>
 
@@ -195,8 +203,8 @@ export default function LoginScreen() {
             onPress={() => promptAsync()}
             disabled={!request || loading}
           >
-            <Feather name="globe" size={20} color="#333" style={{ marginRight: 8 }} />
-            <ThemedText style={styles.googleButtonText}>Continue with Google</ThemedText>
+            <AntDesign name="google" size={20} color="#333" style={{ marginRight: 8 }} />
+            <ThemedText style={styles.googleButtonText}>{t('login.continueWithGoogle')}</ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>

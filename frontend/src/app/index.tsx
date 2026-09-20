@@ -3,9 +3,11 @@ import { StyleSheet, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
@@ -15,7 +17,7 @@ export default function WelcomeScreen() {
             <View style={styles.logoContainer}>
               <ThemedText style={styles.logoText}>HANOT+</ThemedText>
               <ThemedText style={styles.sloganText}>
-                Solution Numérique{'\n'}pour Commerçants
+                {t('index.slogan')}
               </ThemedText>
             </View>
             
@@ -26,7 +28,7 @@ export default function WelcomeScreen() {
               ]}
               onPress={() => router.replace('/login')}
             >
-              <ThemedText style={styles.buttonText}>Get Started</ThemedText>
+              <ThemedText style={styles.buttonText}>{t('index.getStarted')}</ThemedText>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -41,7 +43,7 @@ const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
-    backgroundColor: '#054687',
+    backgroundColor: '#0B308D',
   },
   safeArea: {
     flex: 1,
@@ -83,7 +85,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   buttonText: {
-    color: '#054687',
+    color: '#0B308D',
     fontWeight: 'bold',
     fontSize: 18,
   },

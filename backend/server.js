@@ -6,29 +6,39 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hanoti_secure_key_12345';
 const PORT = process.env.PORT || 3000;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Database connection
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'hanoti_db'
+  database: process.env.DB_NAME || 'hanoti_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect((err) => {
+db.getConnection((err, conn) => {
   if (err) {
     console.error('Error connecting to MySQL:', err);
     return;
   }
-  console.log('Connected to MySQL database hanoti_db');
+  console.log('Connected to MySQL database hanoti_db (Pool)');
+  conn.release();
 });
 
 // Email Transporter (Nodemailer)
@@ -53,7 +63,10 @@ app.post('/login', (req, res) => {
   }
 
   db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-    if (err) return res.status(500).json({ message: 'Database error' });
+    if (err) {
+      console.error('Login DB Error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
     if (results.length === 0) return res.status(401).json({ message: 'Invalid email or password' });
 
     const user = results[0];
@@ -183,6 +196,141 @@ app.post('/auth/reset-password', (req, res) => {
       res.json({ message: 'Password updated successfully' });
     });
   });
+});
+
+/* ====================================================
+   AUTHENTICATION MIDDLEWARE
+==================================================== */
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+  
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Token is invalid or expired' });
+    req.user = user;
+    next();
+  });
+};
+
+/* ====================================================
+   USER PROFILE
+==================================================== */
+app.get('/user/profile', authenticateToken, (req, res) => {
+  db.query('SELECT id, email, first_name, last_name, birthday, phone_number, role, abonnement, custom_id, followers_count, following_count, streak, avatar_url FROM users WHERE id = ?', [req.user.id], (err, results) => {
+    if (err) {
+      console.error('Profile Fetch Error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    if (results.length === 0) return res.status(404).json({ message: 'User not found' });
+    res.json(results[0]);
+  });
+});
+
+/* ====================================================
+   USER PROFILE UPLOADS
+==================================================== */
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads/profiles');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/profiles');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  }
+});
+
+app.post('/user/profile/upload', authenticateToken, upload.single('avatar'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No image uploaded' });
+  }
+
+  const avatarUrl = `/uploads/profiles/${req.file.filename}`;
+  
+  db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id], (err) => {
+    if (err) {
+      console.error('Avatar Update Error:', err);
+      return res.status(500).json({ message: 'Database error while saving avatar' });
+    }
+    res.json({ message: 'Avatar updated successfully', avatar_url: avatarUrl });
+  });
+});
+
+app.put('/user/profile', authenticateToken, (req, res) => {
+  const { first_name, last_name, birthday, phone_number } = req.body;
+  
+  // Validation
+  const nameRegex = /^[A-Za-z\s]+$/;
+  if (first_name && !nameRegex.test(first_name)) return res.status(400).json({ message: 'First name must contain only letters.' });
+  if (last_name && !nameRegex.test(last_name)) return res.status(400).json({ message: 'Last name must contain only letters.' });
+  
+  const phoneRegex = /^(?:\+212|0)[5-7]\d{8}$/;
+  if (phone_number && !phoneRegex.test(phone_number)) return res.status(400).json({ message: 'Phone number must be a valid Moroccan number.' });
+
+  db.query('SELECT custom_id FROM users WHERE id = ?', [req.user.id], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Database error' });
+    
+    let custom_id = results[0]?.custom_id || null;
+    
+    // Always generate custom_id based on first name and last name
+    if (first_name && last_name) {
+      custom_id = `@${first_name.toLowerCase()}${last_name.toLowerCase()}`.replace(/\s+/g, '');
+    }
+
+    const query = 'UPDATE users SET first_name = ?, last_name = ?, birthday = ?, phone_number = ?, custom_id = COALESCE(?, custom_id) WHERE id = ?';
+    db.query(query, [first_name, last_name, birthday, phone_number, custom_id, req.user.id], (updateErr) => {
+      if (updateErr) {
+        console.error('Profile Update Error:', updateErr);
+        // Fallback if custom_id already exists (duplicate)
+        if (updateErr.code === 'ER_DUP_ENTRY') {
+           const fallbackId = custom_id + Math.floor(Math.random() * 1000);
+           db.query(query, [first_name, last_name, birthday, phone_number, fallbackId, req.user.id], (err2) => {
+             if (err2) return res.status(500).json({ message: 'Database error on generating unique ID' });
+             return res.json({ message: 'Profile updated successfully with generated ID' });
+           });
+           return;
+        }
+        return res.status(500).json({ message: 'Database error' });
+      }
+      res.json({ message: 'Profile updated successfully' });
+    });
+  });
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File is too large. Maximum size is 2MB.' });
+    }
+  } else if (err) {
+     return res.status(400).json({ message: err.message });
+  }
+  
+  console.error('Unhandled Error:', err);
+  res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
 app.listen(PORT, () => {

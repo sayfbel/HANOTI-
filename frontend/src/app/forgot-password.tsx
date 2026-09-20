@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   
   const [email, setEmail] = useState('');
@@ -15,9 +17,14 @@ export default function ForgotPasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const requestResetCode = async () => {
-    if (!email) return Alert.alert('Error', 'Please enter your email.');
+    setErrorMsg('');
+    if (!email) {
+      setErrorMsg('Please enter your email.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('http://localhost:3000/auth/forgot-password', {
@@ -27,16 +34,20 @@ export default function ForgotPasswordScreen() {
       });
       const data = await res.json();
       if (res.ok) setStep(2);
-      else Alert.alert('Error', data.message || 'Verification failed');
+      else setErrorMsg(data.message || 'Verification failed');
     } catch (e) {
-      Alert.alert('Error', 'Could not reach server.');
+      setErrorMsg('Could not reach server.');
     } finally {
       setLoading(false);
     }
   };
 
   const verifyCode = async () => {
-    if (!code || code.length !== 6) return Alert.alert('Error', 'Please enter a valid 6-digit code.');
+    setErrorMsg('');
+    if (!code || code.length !== 6) {
+      setErrorMsg('Please enter a valid 6-digit code.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('http://localhost:3000/auth/verify-code', {
@@ -46,17 +57,19 @@ export default function ForgotPasswordScreen() {
       });
       const data = await res.json();
       if (res.ok) setStep(3);
-      else Alert.alert('Error', data.message || 'Invalid code');
+      else setErrorMsg(data.message || 'Invalid code');
     } catch (e) {
-      Alert.alert('Error', 'Could not reach server.');
+      setErrorMsg('Could not reach server.');
     } finally {
       setLoading(false);
     }
   };
 
   const resetPassword = async () => {
+    setErrorMsg('');
     if (!newPassword || newPassword !== confirmPassword) {
-      return Alert.alert('Error', 'Passwords do not match.');
+      setErrorMsg('Passwords do not match.');
+      return;
     }
     setLoading(true);
     try {
@@ -67,14 +80,18 @@ export default function ForgotPasswordScreen() {
       });
       const data = await res.json();
       if (res.ok) {
-        Alert.alert('Success', 'Password updated successfully!', [
-          { text: 'OK', onPress: () => router.replace('/login') }
-        ]);
+        router.replace({
+          pathname: '/thanks',
+          params: {
+            message: t('forgot.successMessage'),
+            redirect: '/login'
+          }
+        });
       } else {
-        Alert.alert('Error', data.message || 'Reset failed');
+        setErrorMsg(data.message || 'Reset failed');
       }
     } catch (e) {
-      Alert.alert('Error', 'Could not reach server.');
+      setErrorMsg('Could not reach server.');
     } finally {
       setLoading(false);
     }
@@ -83,30 +100,47 @@ export default function ForgotPasswordScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Pressable 
+          style={styles.backButton} 
+          onPress={() => {
+            setErrorMsg('');
+            if (step > 1) {
+              setStep(step - 1);
+            } else {
+              router.back();
+            }
+          }}
+        >
           <Feather name="arrow-left" size={24} color="#111827" />
         </Pressable>
 
         <View style={styles.header}>
           <ThemedText style={styles.title}>
-            {step === 1 ? 'Forgot Password' : step === 2 ? 'Enter Code' : 'New Password'}
+            {step === 1 ? t('forgot.title1') : step === 2 ? t('forgot.title2') : t('forgot.title3')}
           </ThemedText>
           <ThemedText style={styles.subtitle}>
             {step === 1 
-              ? 'Enter your email to receive a reset code' 
+              ? t('forgot.subtitle1') 
               : step === 2 
-              ? 'Enter the 6-digit code sent to your email' 
-              : 'Create a strong, new password'}
+              ? t('forgot.subtitle2') 
+              : t('forgot.subtitle3')}
           </ThemedText>
         </View>
 
         <View style={styles.formContainer}>
+          {errorMsg ? (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={20} color="#EF4444" />
+              <ThemedText style={styles.errorText}>{errorMsg}</ThemedText>
+            </View>
+          ) : null}
+
           {step === 1 && (
             <>
               <View style={styles.inputGroup}>
                 <TextInput 
                   style={styles.input}
-                  placeholder="Email address"
+                  placeholder={t('login.emailPlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -115,7 +149,7 @@ export default function ForgotPasswordScreen() {
                 />
               </View>
               <Pressable style={styles.actionButton} onPress={requestResetCode} disabled={loading}>
-                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>Send Code</ThemedText>}
+                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>{t('forgot.sendCode')}</ThemedText>}
               </Pressable>
             </>
           )}
@@ -125,7 +159,7 @@ export default function ForgotPasswordScreen() {
               <View style={styles.inputGroup}>
                 <TextInput 
                   style={styles.input}
-                  placeholder="6-Digit Code"
+                  placeholder={t('forgot.codePlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="number-pad"
                   maxLength={6}
@@ -134,7 +168,7 @@ export default function ForgotPasswordScreen() {
                 />
               </View>
               <Pressable style={styles.actionButton} onPress={verifyCode} disabled={loading}>
-                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>Verify Code</ThemedText>}
+                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>{t('forgot.verifyCode')}</ThemedText>}
               </Pressable>
             </>
           )}
@@ -144,7 +178,7 @@ export default function ForgotPasswordScreen() {
               <View style={styles.inputGroup}>
                 <TextInput 
                   style={styles.input}
-                  placeholder="New Password"
+                  placeholder={t('forgot.newPasswordPlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry
                   value={newPassword}
@@ -154,7 +188,7 @@ export default function ForgotPasswordScreen() {
               <View style={styles.inputGroup}>
                 <TextInput 
                   style={styles.input}
-                  placeholder="Confirm New Password"
+                  placeholder={t('forgot.confirmPasswordPlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   secureTextEntry
                   value={confirmPassword}
@@ -162,7 +196,7 @@ export default function ForgotPasswordScreen() {
                 />
               </View>
               <Pressable style={styles.actionButton} onPress={resetPassword} disabled={loading}>
-                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>Update Password</ThemedText>}
+                {loading ? <ActivityIndicator color="#ffffff" /> : <ThemedText style={styles.actionButtonText}>{t('forgot.resetPassword')}</ThemedText>}
               </Pressable>
             </>
           )}
@@ -188,6 +222,21 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: 'bold', color: '#111827' },
   subtitle: { fontSize: 16, color: '#6B7280' },
   formContainer: { gap: 16 },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    gap: 8,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    flex: 1,
+  },
   inputGroup: {},
   input: {
     backgroundColor: '#F9FAFB',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, StyleSheet, Pressable } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
+import { useLanguage } from '@/context/LanguageContext';
 
 export type ConfirmDialogProps = {
   visible: boolean;
@@ -18,9 +19,14 @@ export function ConfirmDialog({
   message,
   onConfirm,
   onCancel,
-  confirmText = 'Yes',
-  cancelText = 'No'
+  confirmText,
+  cancelText
 }: ConfirmDialogProps) {
+  const { t } = useLanguage();
+  
+  const finalConfirmText = confirmText || t('common.yes');
+  const finalCancelText = cancelText || t('common.no');
+
   return (
     <Modal
       animationType="fade"
@@ -34,10 +40,10 @@ export function ConfirmDialog({
           <ThemedText style={styles.message}>{message}</ThemedText>
           <View style={styles.buttonRow}>
             <Pressable style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-              <ThemedText style={styles.cancelText}>{cancelText}</ThemedText>
+              <ThemedText style={styles.cancelText}>{finalCancelText}</ThemedText>
             </Pressable>
             <Pressable style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-              <ThemedText style={styles.confirmText}>{confirmText}</ThemedText>
+              <ThemedText style={styles.confirmText}>{finalConfirmText}</ThemedText>
             </Pressable>
           </View>
         </View>

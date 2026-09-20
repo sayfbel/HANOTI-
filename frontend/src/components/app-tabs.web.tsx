@@ -4,6 +4,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 
 import { ThemedText } from './themed-text';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AppTabs() {
   return (
@@ -35,21 +36,30 @@ export default function AppTabs() {
 }
 
 export function TabButton({ IconComponent, iconName, label, isCenter, isFocused, ...props }: any) {
-  const color = isFocused ? '#1a1a1a' : '#8e8e93';
+  const { theme, colors } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const iconColor = isFocused 
+    ? (isDark ? '#00C9FF' : colors.primary)
+    : (isDark ? 'rgba(255, 255, 255, 0.6)' : '#8e8e93');
   
   return (
     <Pressable {...props} style={({ pressed }) => [styles.tabButtonWrapper, pressed && styles.pressed]}>
       {isCenter ? (
         <View style={styles.fabWrapper}>
-          <View style={[styles.fabBtn, isFocused && { backgroundColor: '#5a4bd1' }]}>
-            <IconComponent name={iconName} size={22} color="#FFFFFF" />
+          <View style={[
+            styles.fabBtn, 
+            { backgroundColor: isDark ? '#ffffff' : colors.primary },
+            isFocused && { backgroundColor: isDark ? '#F0F0F0' : '#007ACC' }
+          ]}>
+            <IconComponent name={iconName} size={22} color={isDark ? colors.primary : '#FFFFFF'} />
           </View>
         </View>
       ) : (
         <View style={styles.navItem}>
-          <IconComponent name={iconName} size={20} color={color} />
+          <IconComponent name={iconName} size={20} color={iconColor} />
           {label && (
-            <ThemedText style={{ color: color, fontSize: 11, fontWeight: '500', marginTop: 4 }}>
+            <ThemedText style={{ color: iconColor, fontSize: 11, fontWeight: '500', marginTop: 4 }}>
               {label}
             </ThemedText>
           )}
@@ -60,6 +70,9 @@ export function TabButton({ IconComponent, iconName, label, isCenter, isFocused,
 }
 
 export function CustomTabList(props: TabListProps) {
+  const { theme, colors } = useTheme();
+  const isDark = theme === 'dark';
+
   return (
     <View style={styles.bottomNav}>
       <View style={styles.navBgWrapper}>
@@ -70,7 +83,7 @@ export function CustomTabList(props: TabListProps) {
         >
           <Path 
             d="M0,20 Q0,0 20,0 L135,0 Q155,0 162,18 A35,35 0 0,0 213,18 Q220,0 240,0 L355,0 Q375,0 375,20 L375,70 L0,70 Z" 
-            fill="#ffffff" 
+            fill={isDark ? colors.primary : colors.surface} 
           />
         </Svg>
       </View>
@@ -141,10 +154,10 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#6c5ce7',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6c5ce7',
+    shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.38,
     shadowRadius: 18,
