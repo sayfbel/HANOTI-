@@ -12,12 +12,6 @@ export default function WelcomeScreen() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.replace('/(tabs)/dashboard');
-    }
-  }, [user, isLoading]);
-
   return (
     <View style={styles.container}>
       <View style={styles.background}>

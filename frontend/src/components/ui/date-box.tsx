@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, Platform, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 
 interface DateBoxProps {
   value: string;
@@ -9,11 +10,18 @@ interface DateBoxProps {
 }
 
 const DAYS_OF_WEEK = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBoxProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [tempDate, setTempDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  const [viewMode, setViewMode] = useState<'calendar' | 'months' | 'years'>('calendar');
+  const [yearPage, setYearPage] = useState(new Date().getFullYear());
 
   useEffect(() => {
     if (value) {
@@ -21,23 +29,28 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
       if (!isNaN(d.getTime())) {
         setTempDate(d);
         setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+        setYearPage(d.getFullYear());
       }
     } else {
       setTempDate(null);
       setCurrentMonth(new Date());
+      setYearPage(new Date().getFullYear());
     }
   }, [value, modalVisible]);
 
   const openModal = () => {
+    setViewMode('calendar');
     if (value) {
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
         setTempDate(d);
         setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+        setYearPage(d.getFullYear());
       }
     } else {
       setTempDate(null);
       setCurrentMonth(new Date());
+      setYearPage(new Date().getFullYear());
     }
     setModalVisible(true);
   };
@@ -62,6 +75,20 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
 
   const changeYear = (offset: number) => {
     setCurrentMonth(new Date(currentMonth.getFullYear() + offset, currentMonth.getMonth(), 1));
+  };
+
+  const changeYearPage = (offset: number) => {
+    setYearPage(prev => prev + offset * 12);
+  };
+
+  const selectMonth = (monthIndex: number) => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), monthIndex, 1));
+    setViewMode('calendar');
+  };
+
+  const selectYear = (year: number) => {
+    setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
+    setViewMode('calendar');
   };
 
   const renderCalendar = () => {
@@ -150,7 +177,47 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
     );
   };
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const renderMonths = () => {
+    return (
+      <View style={styles.pickerGrid}>
+        {MONTH_NAMES.map((month, idx) => (
+          <Pressable 
+            key={month} 
+            style={[styles.pickerCell, currentMonth.getMonth() === idx && styles.selectedPickerCell]} 
+            onPress={() => selectMonth(idx)}
+          >
+            <Text style={[styles.pickerCellText, currentMonth.getMonth() === idx && styles.selectedPickerCellText]}>
+              {month.substring(0, 3)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  };
+
+  const renderYears = () => {
+    const years = [];
+    const startYear = yearPage - 6;
+    for (let i = 0; i < 12; i++) {
+      years.push(startYear + i);
+    }
+
+    return (
+      <View style={styles.pickerGrid}>
+        {years.map((year) => (
+          <Pressable 
+            key={year} 
+            style={[styles.pickerCell, currentMonth.getFullYear() === year && styles.selectedPickerCell]} 
+            onPress={() => selectYear(year)}
+          >
+            <Text style={[styles.pickerCellText, currentMonth.getFullYear() === year && styles.selectedPickerCellText]}>
+              {year}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -158,7 +225,7 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
         <Text style={[styles.inputText, !value && styles.placeholderText]}>
           {value || placeholder}
         </Text>
-        <Feather name="calendar" size={20} color="#111827" />
+        <Feather name="calendar" size={20} color={colors.textSecondary} />
       </Pressable>
 
       <Modal
@@ -172,29 +239,58 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
             
             <View style={styles.header}>
               <View style={styles.navGroup}>
-                <Pressable onPress={() => changeYear(-1)} style={styles.navButton}>
-                  <Feather name="chevrons-left" size={16} color="#4B5563" />
+                <Pressable 
+                  onPress={() => {
+                    if (viewMode === 'calendar') changeYear(-1);
+                    else if (viewMode === 'years') changeYearPage(-1);
+                  }} 
+                  style={styles.navButton}
+                >
+                  <Feather name="chevrons-left" size={16} color={colors.textSecondary} />
                 </Pressable>
-                <Pressable onPress={() => changeMonth(-1)} style={styles.navButton}>
-                  <Feather name="chevron-left" size={16} color="#4B5563" />
+                {viewMode === 'calendar' && (
+                  <Pressable onPress={() => changeMonth(-1)} style={styles.navButton}>
+                    <Feather name="chevron-left" size={16} color={colors.textSecondary} />
+                  </Pressable>
+                )}
+              </View>
+              
+              <View style={styles.titleGroup}>
+                {viewMode === 'calendar' && (
+                  <Pressable onPress={() => setViewMode('months')}>
+                    <Text style={styles.headerTitle}>
+                      {MONTH_NAMES[currentMonth.getMonth()]}
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={() => setViewMode(viewMode === 'years' ? 'calendar' : 'years')}>
+                  <Text style={[styles.headerTitle, (viewMode === 'years' || viewMode === 'months') && styles.activeHeaderTitle]}>
+                    {viewMode === 'years' ? `${yearPage - 6} - ${yearPage + 5}` : currentMonth.getFullYear()}
+                  </Text>
                 </Pressable>
               </View>
               
-              <Text style={styles.headerTitle}>
-                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-              </Text>
-              
               <View style={styles.navGroup}>
-                <Pressable onPress={() => changeMonth(1)} style={styles.navButton}>
-                  <Feather name="chevron-right" size={16} color="#4B5563" />
-                </Pressable>
-                <Pressable onPress={() => changeYear(1)} style={styles.navButton}>
-                  <Feather name="chevrons-right" size={16} color="#4B5563" />
+                {viewMode === 'calendar' && (
+                  <Pressable onPress={() => changeMonth(1)} style={styles.navButton}>
+                    <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+                  </Pressable>
+                )}
+                <Pressable 
+                  onPress={() => {
+                    if (viewMode === 'calendar') changeYear(1);
+                    else if (viewMode === 'years') changeYearPage(1);
+                  }} 
+                  style={styles.navButton}
+                >
+                  <Feather name="chevrons-right" size={16} color={colors.textSecondary} />
                 </Pressable>
               </View>
             </View>
 
-            {renderCalendar()}
+            {viewMode === 'calendar' && renderCalendar()}
+            {viewMode === 'months' && renderMonths()}
+            {viewMode === 'years' && renderYears()}
 
             <View style={styles.footer}>
               <Pressable onPress={handleCancel} style={styles.cancelButton}>
@@ -212,14 +308,14 @@ export function DateBox({ value, onChange, placeholder = 'YYYY-MM-DD' }: DateBox
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     width: '100%',
   },
   inputContainer: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -229,29 +325,29 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 16,
-    color: '#111827',
+    color: colors.text,
   },
   placeholderText: {
-    color: '#9CA3AF',
+    color: colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 360,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
@@ -259,34 +355,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  navGroup: {
+  titleGroup: {
     flexDirection: 'row',
     gap: 8,
+  },
+  navGroup: {
+    flexDirection: 'row',
+    gap: 6,
   },
   navButton: {
     width: 32,
     height: 32,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.background,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text,
+  },
+  activeHeaderTitle: {
+    color: colors.primary,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 20,
   },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 20,
+    justifyContent: 'space-between',
+  },
   cell: {
     width: '14.28%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pickerCell: {
+    width: '31%',
+    aspectRatio: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  selectedPickerCell: {
+    backgroundColor: colors.primary,
+  },
+  pickerCellText: {
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  selectedPickerCellText: {
+    color: '#FFF',
   },
   dayCell: {
     borderRadius: 8,
@@ -295,21 +426,21 @@ const styles = StyleSheet.create({
   dayOfWeekText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   dayText: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
   },
   otherMonthText: {
-    color: '#D1D5DB',
+    color: colors.border, // Very light color for other month
   },
   todayCell: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.background,
   },
   selectedCell: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.primary,
   },
   selectedText: {
     color: '#FFFFFF',
@@ -323,26 +454,27 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     alignItems: 'center',
+    backgroundColor: colors.background,
   },
   cancelButtonText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#4B5563',
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   applyButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#111827',
+    borderRadius: 12,
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   applyButtonText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

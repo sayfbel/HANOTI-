@@ -12,11 +12,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { PageHeader } from '../components/ui/PageHeader';
+import { useAppAlert } from '../context/AlertContext';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -132,7 +134,7 @@ export default function EditProfileScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert("Error", "You are not fully authenticated.");
+        showAlert('error', "Error", "You are not fully authenticated.");
         setUploadingImage(false);
         return;
       }
@@ -165,13 +167,13 @@ export default function EditProfileScreen() {
       const data = await res.json();
       if (res.ok) {
         setAvatarUrl(`http://localhost:3000${data.avatar_url}`);
-        Alert.alert("Success", "Profile image updated successfully");
+        showAlert('success', "Success", "Profile image updated successfully");
       } else {
-        Alert.alert("Error", data.message || "Failed to upload image");
+        showAlert('error', "Error", data.message || "Failed to upload image");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      Alert.alert("Error", "Could not upload image. Ensure backend is running and accepts multipart data.");
+      showAlert('error', "Error", "Could not upload image. Ensure backend is running and accepts multipart data.");
     } finally {
       setUploadingImage(false);
     }
@@ -180,17 +182,17 @@ export default function EditProfileScreen() {
   const validateInputs = () => {
     const nameRegex = /^[A-Za-z\s]+$/;
     if (firstName && !nameRegex.test(firstName)) {
-      Alert.alert("Validation Error", "First name must contain only letters.");
+      showAlert('error', "Validation Error", "First name must contain only letters.");
       return false;
     }
     if (lastName && !nameRegex.test(lastName)) {
-      Alert.alert("Validation Error", "Last name must contain only letters.");
+      showAlert('error', "Validation Error", "Last name must contain only letters.");
       return false;
     }
 
     const phoneRegex = /^(?:\+212|0)[5-7]\d{8}$/;
     if (phoneNumber && !phoneRegex.test(phoneNumber)) {
-      Alert.alert("Validation Error", "Phone number must be a valid Moroccan number (e.g. 0612345678).");
+      showAlert('error', "Validation Error", "Phone number must be a valid Moroccan number (e.g. 0612345678).");
       return false;
     }
 
@@ -204,7 +206,7 @@ export default function EditProfileScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert("Error", "You are not fully authenticated. Please log in again.");
+        showAlert('error', "Error", "You are not fully authenticated. Please log in again.");
         setSaving(false);
         return;
       }
@@ -224,14 +226,14 @@ export default function EditProfileScreen() {
       });
       
       if (res.ok) {
-        Alert.alert("Success", "Profile updated successfully");
+        showAlert('success', "Success", "Profile updated successfully");
         router.back();
       } else {
         const data = await res.json();
-        Alert.alert("Error", data.message || "Failed to update profile");
+        showAlert('error', "Error", data.message || "Failed to update profile");
       }
     } catch (err) {
-      Alert.alert("Error", "Could not reach server");
+      showAlert('error', "Error", "Could not reach server");
     } finally {
       setSaving(false);
     }

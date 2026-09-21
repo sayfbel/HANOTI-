@@ -79,7 +79,15 @@ app.post('/login', (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.json({ message: 'Login successful', token, user: { email: user.email, role: user.role } });
+    res.json({ message: 'Login successful', token, user: { 
+      email: user.email, 
+      role: user.role,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      birthday: user.birthday,
+      phone_number: user.phone_number,
+      avatar_url: user.avatar_url
+    } });
   });
 });
 
@@ -112,7 +120,15 @@ app.post('/auth/google', async (req, res) => {
         { expiresIn: '24h' }
       );
 
-      res.json({ message: 'Google Login successful', token, user: { email: user.email, role: user.role } });
+      res.json({ message: 'Google Login successful', token, user: { 
+        email: user.email, 
+        role: user.role,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        birthday: user.birthday,
+        phone_number: user.phone_number,
+        avatar_url: user.avatar_url
+      } });
     });
   } catch (error) {
     console.error('Google Auth Error:', error);

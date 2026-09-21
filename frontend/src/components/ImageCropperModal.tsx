@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Modal, StyleSheet, View, Text, Pressable, Dimensions, Image as RNImage, ActivityIndicator, PanResponder, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useTheme } from '../context/ThemeContext';
 
 interface ImageCropperModalProps {
   visible: boolean;
@@ -15,6 +16,9 @@ const SIZE = width * 0.8; // The size of the crop circle
 const BORDER_WIDTH = width; // Large enough to cover the rest of the screen
 
 export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: ImageCropperModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
   const [scale, setScale] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [imageLayout, setImageLayout] = useState<{ width: number, height: number, originalW: number, originalH: number } | null>(null);
@@ -135,14 +139,13 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={onClose} style={styles.iconBtn}>
-            <Feather name="chevron-left" size={24} color="#000" />
+            <Feather name="chevron-left" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>Preview</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.content}>
-          {/* We make the image container large to allow panning */}
           <View style={styles.imageWrapper}>
             <Animated.View 
               {...panResponder.panHandlers}
@@ -165,7 +168,6 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
             </Animated.View>
           </View>
           
-          {/* The circular overlay to simulate cropping mask */}
           <View style={styles.overlay} pointerEvents="none">
             <View style={styles.mask} />
           </View>
@@ -173,10 +175,10 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
           <View style={styles.controls}>
             <View style={styles.zoomControls}>
               <Pressable onPress={handleZoomOut} style={styles.zoomBtn}>
-                <Feather name="minus" size={20} color="#000" />
+                <Feather name="minus" size={20} color={colors.text} />
               </Pressable>
               <Pressable onPress={handleZoomIn} style={styles.zoomBtn}>
-                <Feather name="plus" size={20} color="#000" />
+                <Feather name="plus" size={20} color={colors.text} />
               </Pressable>
               <Pressable onPress={handleReset} style={styles.resetBtn}>
                 <Text style={styles.resetText}>Reset</Text>
@@ -206,10 +208,10 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   content: {
     flex: 1,
@@ -258,7 +260,7 @@ const styles = StyleSheet.create({
     height: SIZE + 2 * BORDER_WIDTH,
     borderRadius: (SIZE + 2 * BORDER_WIDTH) / 2,
     borderWidth: BORDER_WIDTH,
-    borderColor: '#F9F9F9',
+    borderColor: colors.background,
     marginTop: -(SIZE / 2 + BORDER_WIDTH),
     marginLeft: -(SIZE / 2 + BORDER_WIDTH),
   },
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
   zoomControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 30,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -293,33 +295,40 @@ const styles = StyleSheet.create({
   resetText: {
     fontWeight: '600',
     fontSize: 14,
-    color: '#000',
+    color: colors.text,
   },
   footer: {
     padding: 24,
     paddingBottom: 40,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 10,
   },
   selectBtn: {
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   selectText: {
     fontWeight: '600',
     fontSize: 16,
-    color: '#000',
+    color: colors.text,
   },
   confirmBtn: {
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: colors.primary,
   },
   confirmText: {
     fontWeight: '600',

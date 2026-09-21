@@ -6,12 +6,14 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PageHeader } from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { useAppAlert } from '../context/AlertContext';
 
 export default function AddCardScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useLanguage();
   const { token } = useAuth();
+  const { showAlert } = useAppAlert();
 
   const styles = useMemo(() => getStyles(colors), [colors]);
 
@@ -87,7 +89,7 @@ export default function AddCardScreen() {
 
   const handleSave = async () => {
     if (!cardNumber || !expiry || !name) {
-      Alert.alert('Error', 'Please fill in all details');
+      showAlert('error', 'Error', 'Please fill in all details');
       return;
     }
     
@@ -110,7 +112,7 @@ export default function AddCardScreen() {
       });
       
       if (res.ok) {
-        Alert.alert('Success', 'Credit card saved securely!');
+        showAlert('success', 'Success', 'Credit card saved securely!');
         if (router.canGoBack()) {
           router.back();
         } else {
@@ -118,10 +120,10 @@ export default function AddCardScreen() {
         }
       } else {
         const errorData = await res.json();
-        Alert.alert('Error', errorData.message || 'Failed to save card');
+        showAlert('error', 'Error', errorData.message || 'Failed to save card');
       }
     } catch (err) {
-      Alert.alert('Error', 'Network error');
+      showAlert('error', 'Error', 'Network error');
     } finally {
       setSaving(false);
     }
@@ -269,17 +271,17 @@ export default function AddCardScreen() {
                       headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (res.ok) {
-                      Alert.alert('Success', 'Credit card deleted.');
+                      showAlert('success', 'Success', 'Credit card deleted.');
                       if (router.canGoBack()) {
                         router.back();
                       } else {
                         router.push('/subscription');
                       }
                     } else {
-                      Alert.alert('Error', 'Failed to delete credit card.');
+                      showAlert('error', 'Error', 'Failed to delete credit card.');
                     }
                   } catch (err) {
-                    Alert.alert('Error', 'An error occurred while deleting.');
+                    showAlert('error', 'Error', 'An error occurred while deleting.');
                   }
                 }}
                 disabled={saving}

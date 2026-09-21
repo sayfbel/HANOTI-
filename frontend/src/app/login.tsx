@@ -25,11 +25,6 @@ export default function LoginScreen() {
   const { t } = useLanguage();
   const { signIn, user, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.replace('/(tabs)/dashboard');
-    }
-  }, [user, isLoading]);
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: '977526709418-on4okqart5m6b8089cn0umrbee00ivck.apps.googleusercontent.com',
     clientId: '977526709418-on4okqart5m6b8089cn0umrbee00ivck.apps.googleusercontent.com',
@@ -64,7 +59,6 @@ export default function LoginScreen() {
       if (res.ok) {
         if (data.user && data.token) {
           await signIn(data.user, data.token, rememberMe);
-          router.replace('/(tabs)/dashboard');
         }
       } else {
         setErrorMsg(data.message || 'Error connecting to server.');
@@ -96,7 +90,6 @@ export default function LoginScreen() {
       if (res.ok) {
         if (data.user && data.token) {
           await signIn(data.user, data.token, rememberMe);
-          router.replace('/(tabs)/dashboard');
         }
       } else {
         setErrorMsg(data.message || t('login.err.network'));

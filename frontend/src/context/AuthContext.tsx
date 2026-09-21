@@ -6,6 +6,9 @@ type User = {
   email: string;
   first_name: string;
   last_name: string;
+  birthday?: string;
+  phone_number?: string;
+  avatar_url?: string;
   [key: string]: any;
 };
 

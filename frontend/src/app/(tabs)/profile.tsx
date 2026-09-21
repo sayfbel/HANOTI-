@@ -6,11 +6,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useAppAlert } from '../../context/AlertContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -121,19 +123,19 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Actions Rapides</Text>
         </View>
         <View style={styles.actionsGrid}>
-          <Pressable style={styles.actionBtn} onPress={() => Alert.alert("Export", "Fonction d'export à venir")}>
+          <Pressable style={styles.actionBtn} onPress={() => showAlert('info', "Export", "Fonction d'export à venir")}>
             <View style={styles.actionIconContainer}>
               <Feather name="file-text" size={24} color={colors.primary} />
             </View>
             <Text style={styles.actionBtnText}>Exporter</Text>
           </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => Alert.alert("Rappels", "Fonction d'envoi de SMS à venir")}>
+          <Pressable style={styles.actionBtn} onPress={() => showAlert('info', "Rappels", "Fonction d'envoi de SMS à venir")}>
             <View style={styles.actionIconContainer}>
               <Feather name="bell" size={24} color={colors.primary} />
             </View>
             <Text style={styles.actionBtnText}>Rappels</Text>
           </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => Alert.alert("Archives", "Liste des clients archivés à venir")}>
+          <Pressable style={styles.actionBtn} onPress={() => showAlert('info', "Archives", "Liste des clients archivés à venir")}>
             <View style={styles.actionIconContainer}>
               <Feather name="archive" size={24} color={colors.primary} />
             </View>
