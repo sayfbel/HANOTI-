@@ -1,13 +1,22 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [user, isLoading]);
 
   return (
     <View style={styles.container}>

@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { SupportedLanguage } from '../constants/translations';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -13,6 +14,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { theme, setTheme, colors } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { signOut } = useAuth();
   
   const [pauseNotifications, setPauseNotifications] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -57,8 +59,7 @@ export default function SettingsScreen() {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('token');
+      await signOut();
       router.replace('/login');
     } catch (e) {
       console.error(e);

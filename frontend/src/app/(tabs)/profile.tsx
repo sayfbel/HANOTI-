@@ -62,7 +62,6 @@ export default function ProfileScreen() {
   const handle = profileData?.custom_id || (profileData?.first_name && profileData?.last_name 
     ? `@${profileData.first_name.toLowerCase()}${profileData.last_name.toLowerCase()}`.replace(/\s+/g, '') 
     : '@newuser');
-  const streak = profileData?.streak || 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>

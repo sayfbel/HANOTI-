@@ -8,10 +8,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { useLanguage } from '@/context/LanguageContext';
-
-// This is critical for web: it tells the popup window to send the auth result 
 // back to the main window and then close itself.
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,8 +23,13 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { t } = useLanguage();
+  const { signIn, user, isLoading } = useAuth();
 
-  // Set up Google Auth
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [user, isLoading]);
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: '977526709418-on4okqart5m6b8089cn0umrbee00ivck.apps.googleusercontent.com',
     clientId: '977526709418-on4okqart5m6b8089cn0umrbee00ivck.apps.googleusercontent.com',
@@ -58,13 +62,10 @@ export default function LoginScreen() {
       const data = await res.json();
       
       if (res.ok) {
-        if (data.user) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        if (data.user && data.token) {
+          await signIn(data.user, data.token, rememberMe);
+          router.replace('/(tabs)/dashboard');
         }
-        if (data.token) {
-          await AsyncStorage.setItem('token', data.token);
-        }
-        router.replace('/(tabs)/dashboard');
       } else {
         setErrorMsg(data.message || 'Error connecting to server.');
       }
@@ -93,14 +94,10 @@ export default function LoginScreen() {
       const data = await res.json();
       
       if (res.ok) {
-        if (data.user) {
-          await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        if (data.user && data.token) {
+          await signIn(data.user, data.token, rememberMe);
+          router.replace('/(tabs)/dashboard');
         }
-        if (data.token) {
-          await AsyncStorage.setItem('token', data.token);
-        }
-        // If rememberMe is true, you could persist the token to AsyncStorage here
-        router.replace('/(tabs)/dashboard');
       } else {
         setErrorMsg(data.message || t('login.err.network'));
       }

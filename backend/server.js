@@ -74,12 +74,12 @@ app.post('/login', (req, res) => {
     if (!isMatch) return res.status(401).json({ message: 'Invalid email or password' });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, abonnement: user.abonnement }, 
+      { id: user.id, email: user.email, role: user.role }, 
       JWT_SECRET, 
       { expiresIn: '24h' }
     );
 
-    res.json({ message: 'Login successful', token, user: { email: user.email, role: user.role, abonnement: user.abonnement } });
+    res.json({ message: 'Login successful', token, user: { email: user.email, role: user.role } });
   });
 });
 
@@ -107,12 +107,12 @@ app.post('/auth/google', async (req, res) => {
 
       const user = results[0];
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, abonnement: user.abonnement }, 
+        { id: user.id, email: user.email, role: user.role }, 
         JWT_SECRET, 
         { expiresIn: '24h' }
       );
 
-      res.json({ message: 'Google Login successful', token, user: { email: user.email, role: user.role, abonnement: user.abonnement } });
+      res.json({ message: 'Google Login successful', token, user: { email: user.email, role: user.role } });
     });
   } catch (error) {
     console.error('Google Auth Error:', error);
@@ -218,13 +218,67 @@ const authenticateToken = (req, res, next) => {
    USER PROFILE
 ==================================================== */
 app.get('/user/profile', authenticateToken, (req, res) => {
-  db.query('SELECT id, email, first_name, last_name, birthday, phone_number, role, abonnement, custom_id, followers_count, following_count, streak, avatar_url FROM users WHERE id = ?', [req.user.id], (err, results) => {
+  const query = `
+    SELECT u.id, u.email, u.first_name, u.last_name, u.birthday, u.phone_number, 
+           u.role, u.custom_id, u.avatar_url,
+           a.plan_name as subscription_plan, a.start_date as subscription_start, 
+           a.end_date as subscription_end, a.payment_method as subscription_payment
+    FROM users u
+    LEFT JOIN abonnement a ON u.id = a.user_id 
+    WHERE u.id = ? 
+    ORDER BY a.id DESC LIMIT 1
+  `;
+  console.log('EXECUTING PROFILE QUERY:', query);
+  db.query(query, [req.user.id], (err, results) => {
     if (err) {
       console.error('Profile Fetch Error:', err);
       return res.status(500).json({ message: 'Database error' });
     }
     if (results.length === 0) return res.status(404).json({ message: 'User not found' });
     res.json(results[0]);
+  });
+});
+
+/* ====================================================
+   USER CREDIT CARD
+==================================================== */
+app.get('/user/credit-card', authenticateToken, (req, res) => {
+  const query = 'SELECT cardholder_name, last_four, expiry_date, card_type FROM credit_cards WHERE user_id = ? ORDER BY created_at DESC LIMIT 1';
+  db.query(query, [req.user.id], (err, results) => {
+    if (err) {
+      console.error('Fetch Card Error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    if (results.length === 0) return res.json(null);
+    res.json(results[0]);
+  });
+});
+
+app.post('/user/credit-card', authenticateToken, (req, res) => {
+  const { cardholder_name, last_four, expiry_date, card_type } = req.body;
+  
+  if (!cardholder_name || !last_four || !expiry_date) {
+    return res.status(400).json({ message: 'Missing required card details' });
+  }
+
+  const query = 'INSERT INTO credit_cards (user_id, cardholder_name, last_four, expiry_date, card_type) VALUES (?, ?, ?, ?, ?)';
+  db.query(query, [req.user.id, cardholder_name, last_four, expiry_date, card_type], (err) => {
+    if (err) {
+      console.error('Save Card Error:', err);
+      return res.status(500).json({ message: 'Database error while saving card' });
+    }
+    res.json({ message: 'Card saved successfully' });
+  });
+});
+
+app.delete('/user/credit-card', authenticateToken, (req, res) => {
+  const query = 'DELETE FROM credit_cards WHERE user_id = ?';
+  db.query(query, [req.user.id], (err) => {
+    if (err) {
+      console.error('Delete Card Error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    res.json({ message: 'Card deleted successfully' });
   });
 });
 
