@@ -106,8 +106,10 @@ export default function ForgotPasswordScreen() {
             setErrorMsg('');
             if (step > 1) {
               setStep(step - 1);
-            } else {
+            } else if (router.canGoBack()) {
               router.back();
+            } else {
+              router.replace('/login');
             }
           }}
         >

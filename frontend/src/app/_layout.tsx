@@ -19,9 +19,9 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)' || segments[0] === 'onboarding' || segments[0] === 'add-card' || segments[0] === 'edit-profile';
     const isIndex = !segments[0] || segments[0] === 'index';
-    const inPublicGroup = isIndex || segments[0] === 'login' || segments[0] === 'forgot-password';
+    const isPublicGroup = isIndex || segments[0] === 'login' || segments[0] === 'forgot-password' || segments[0] === 'thanks';
+    const inAuthGroup = !isPublicGroup;
 
     if (!user) {
       if (inAuthGroup) {
@@ -30,7 +30,8 @@ function RootLayoutNav() {
     } else {
       const isMissingData = !user.first_name || !user.last_name || !user.birthday || !user.phone_number;
       
-      if (inPublicGroup) {
+      const isAuthRoute = isIndex || segments[0] === 'login' || segments[0] === 'forgot-password';
+      if (isAuthRoute) {
         router.replace(isMissingData ? '/onboarding' : '/(tabs)/dashboard');
       } else if (segments[0] === 'onboarding' && !isMissingData) {
         router.replace('/(tabs)/dashboard');

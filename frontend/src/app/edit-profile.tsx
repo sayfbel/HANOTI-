@@ -227,7 +227,7 @@ export default function EditProfileScreen() {
       
       if (res.ok) {
         showAlert('success', "Success", "Profile updated successfully");
-        router.back();
+        navigateBack();
       } else {
         const data = await res.json();
         showAlert('error', "Error", data.message || "Failed to update profile");
