@@ -105,37 +105,42 @@ export default function OnboardingScreen() {
   const saveProfile = async () => {
     setSaving(true);
     try {
+      const payload: any = {};
+      if (firstName) payload.first_name = firstName;
+      if (lastName) payload.last_name = lastName;
+      if (birthday) payload.birthday = birthday;
+      if (phoneNumber) payload.phone_number = phoneNumber;
+
       const res = await fetch('http://localhost:3000/user/profile', {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          birthday: birthday,
-          phone_number: phoneNumber
-        })
+        body: JSON.stringify(payload)
       });
       
       if (!res.ok) {
-        throw new Error('Failed to update profile');
+        const errData = await res.json().catch(() => ({}));
+        console.warn('Profile update notice:', errData);
       }
       
       // Update local user state
       if (user && token) {
-        const updatedUser = { ...user, first_name: firstName, last_name: lastName, birthday, phone_number: phoneNumber };
-        await signIn(updatedUser, token, true); // Assuming rememberMe is true or handled
+        const updatedUser = { 
+          ...user, 
+          first_name: firstName || user.first_name, 
+          last_name: lastName || user.last_name, 
+          birthday: birthday || user.birthday, 
+          phone_number: phoneNumber || user.phone_number 
+        };
+        await signIn(updatedUser, token, true);
       }
-      
     } catch (err) {
-      console.error(err);
-      showAlert('error', "Error", "Could not save profile data.");
+      console.error('Save profile error:', err);
+    } finally {
       setSaving(false);
-      return false;
     }
-    setSaving(false);
     return true;
   };
 
@@ -161,24 +166,23 @@ export default function OnboardingScreen() {
             card_type: cardType
           })
         });
-        if (!res.ok) throw new Error('Failed to save card');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.warn('Card save notice:', errData);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Save card error:', err);
       }
     }
     
-    // Save profile before finishing
-    const profileSaved = await saveProfile();
-    if (profileSaved) {
-      setStep(5); // Go to Thanks screen
-    }
+    // Save profile and finish
+    await saveProfile();
+    setStep(5); // Go to Thanks screen
   };
 
   const skipCardAndFinish = async () => {
-    const profileSaved = await saveProfile();
-    if (profileSaved) {
-      setStep(5); // Go to Thanks screen
-    }
+    await saveProfile();
+    setStep(5); // Go to Thanks screen
   };
 
   // --- Avatar Logic ---

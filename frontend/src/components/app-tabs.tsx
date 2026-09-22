@@ -17,7 +17,7 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
       
       <NativeTabs.Trigger name="search">
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="add">

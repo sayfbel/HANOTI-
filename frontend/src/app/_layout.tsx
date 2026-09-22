@@ -52,6 +52,7 @@ function RootLayoutNav() {
         <Stack.Screen name="add-card" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="client/[id]" />
       </Stack>
     </>
   );

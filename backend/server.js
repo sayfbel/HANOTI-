@@ -352,32 +352,37 @@ app.post('/user/profile/upload', authenticateToken, upload.single('avatar'), (re
 app.put('/user/profile', authenticateToken, (req, res) => {
   const { first_name, last_name, birthday, phone_number } = req.body;
   
+  const cleanFirstName = (first_name && typeof first_name === 'string' && first_name.trim()) ? first_name.trim() : null;
+  const cleanLastName = (last_name && typeof last_name === 'string' && last_name.trim()) ? last_name.trim() : null;
+  const cleanBirthday = (birthday && typeof birthday === 'string' && birthday.trim()) ? birthday.trim() : null;
+  const cleanPhone = (phone_number && typeof phone_number === 'string' && phone_number.trim()) ? phone_number.trim() : null;
+
   // Validation
   const nameRegex = /^[A-Za-z\s]+$/;
-  if (first_name && !nameRegex.test(first_name)) return res.status(400).json({ message: 'First name must contain only letters.' });
-  if (last_name && !nameRegex.test(last_name)) return res.status(400).json({ message: 'Last name must contain only letters.' });
+  if (cleanFirstName && !nameRegex.test(cleanFirstName)) return res.status(400).json({ message: 'First name must contain only letters.' });
+  if (cleanLastName && !nameRegex.test(cleanLastName)) return res.status(400).json({ message: 'Last name must contain only letters.' });
   
   const phoneRegex = /^(?:\+212|0)[5-7]\d{8}$/;
-  if (phone_number && !phoneRegex.test(phone_number)) return res.status(400).json({ message: 'Phone number must be a valid Moroccan number.' });
+  if (cleanPhone && !phoneRegex.test(cleanPhone)) return res.status(400).json({ message: 'Phone number must be a valid Moroccan number.' });
 
   db.query('SELECT custom_id FROM users WHERE id = ?', [req.user.id], (err, results) => {
     if (err) return res.status(500).json({ message: 'Database error' });
     
     let custom_id = results[0]?.custom_id || null;
     
-    // Always generate custom_id based on first name and last name
-    if (first_name && last_name) {
-      custom_id = `@${first_name.toLowerCase()}${last_name.toLowerCase()}`.replace(/\s+/g, '');
+    // Generate custom_id based on first name and last name if provided
+    if (cleanFirstName && cleanLastName) {
+      custom_id = `@${cleanFirstName.toLowerCase()}${cleanLastName.toLowerCase()}`.replace(/\s+/g, '');
     }
 
-    const query = 'UPDATE users SET first_name = ?, last_name = ?, birthday = ?, phone_number = ?, custom_id = COALESCE(?, custom_id) WHERE id = ?';
-    db.query(query, [first_name, last_name, birthday, phone_number, custom_id, req.user.id], (updateErr) => {
+    const query = 'UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), birthday = COALESCE(?, birthday), phone_number = COALESCE(?, phone_number), custom_id = COALESCE(?, custom_id) WHERE id = ?';
+    db.query(query, [cleanFirstName, cleanLastName, cleanBirthday, cleanPhone, custom_id, req.user.id], (updateErr) => {
       if (updateErr) {
         console.error('Profile Update Error:', updateErr);
         // Fallback if custom_id already exists (duplicate)
-        if (updateErr.code === 'ER_DUP_ENTRY') {
+        if (updateErr.code === 'ER_DUP_ENTRY' && custom_id) {
            const fallbackId = custom_id + Math.floor(Math.random() * 1000);
-           db.query(query, [first_name, last_name, birthday, phone_number, fallbackId, req.user.id], (err2) => {
+           db.query(query, [cleanFirstName, cleanLastName, cleanBirthday, cleanPhone, fallbackId, req.user.id], (err2) => {
              if (err2) return res.status(500).json({ message: 'Database error on generating unique ID' });
              return res.json({ message: 'Profile updated successfully with generated ID' });
            });
@@ -387,6 +392,241 @@ app.put('/user/profile', authenticateToken, (req, res) => {
       }
       res.json({ message: 'Profile updated successfully' });
     });
+  });
+});
+
+/* ====================================================
+   HANOUTI EXPLORE / CLIENTS & DEBT MANAGEMENT
+==================================================== */
+
+// 1. GET ALL CLIENTS WITH COMPUTED DEBTS
+app.get('/api/clients', authenticateToken, (req, res) => {
+  const query = `
+    SELECT 
+      c.id, c.name, c.phone, c.address, c.note, c.avatar_url, c.created_at,
+      COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) AS total_credit,
+      COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS total_paid,
+      (COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0)) AS remaining_debt,
+      COUNT(t.id) AS transaction_count,
+      MAX(t.date) AS last_transaction_date
+    FROM clients c
+    LEFT JOIN client_transactions t ON c.id = t.client_id
+    WHERE c.user_id = ?
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `;
+  db.query(query, [req.user.id], (err, results) => {
+    if (err) {
+      console.error('Fetch clients error:', err);
+      return res.status(500).json({ message: 'Erreur lors de la récupération des clients' });
+    }
+    const clients = results.map(row => ({
+      ...row,
+      total_credit: Number(row.total_credit) || 0,
+      total_paid: Number(row.total_paid) || 0,
+      remaining_debt: Number(row.remaining_debt) || 0,
+      transaction_count: Number(row.transaction_count) || 0
+    }));
+    res.json(clients);
+  });
+});
+
+// 2. CREATE A NEW CLIENT
+app.post('/api/clients', authenticateToken, (req, res) => {
+  const { name, phone, address, note } = req.body;
+  
+  if (!name || !name.trim()) {
+    return res.status(400).json({ message: 'Le nom du client est requis' });
+  }
+  if (!phone || !phone.trim()) {
+    return res.status(400).json({ message: 'Le numéro de téléphone est requis' });
+  }
+
+  const cleanName = name.trim();
+  const cleanPhone = phone.trim();
+  const cleanAddress = address && address.trim() ? address.trim() : null;
+  const cleanNote = note && note.trim() ? note.trim() : null;
+
+  const query = 'INSERT INTO clients (user_id, name, phone, address, note) VALUES (?, ?, ?, ?, ?)';
+  db.query(query, [req.user.id, cleanName, cleanPhone, cleanAddress, cleanNote], (err, result) => {
+    if (err) {
+      console.error('Create client error:', err);
+      return res.status(500).json({ message: 'Erreur lors de l’ajout du client' });
+    }
+    res.status(201).json({
+      id: result.insertId,
+      user_id: req.user.id,
+      name: cleanName,
+      phone: cleanPhone,
+      address: cleanAddress,
+      note: cleanNote,
+      total_credit: 0,
+      total_paid: 0,
+      remaining_debt: 0,
+      transaction_count: 0,
+      created_at: new Date()
+    });
+  });
+});
+
+// 3. GET A SPECIFIC CLIENT BY ID (WITH TRANSACTIONS & TOTALS)
+app.get('/api/clients/:id', authenticateToken, (req, res) => {
+  const clientId = req.params.id;
+  
+  const clientQuery = `
+    SELECT 
+      c.id, c.name, c.phone, c.address, c.note, c.avatar_url, c.created_at,
+      COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) AS total_credit,
+      COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS total_paid,
+      (COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0)) AS remaining_debt,
+      COUNT(t.id) AS transaction_count
+    FROM clients c
+    LEFT JOIN client_transactions t ON c.id = t.client_id
+    WHERE c.id = ? AND c.user_id = ?
+    GROUP BY c.id
+  `;
+
+  db.query(clientQuery, [clientId, req.user.id], (err, clientResults) => {
+    if (err) {
+      console.error('Fetch client details error:', err);
+      return res.status(500).json({ message: 'Erreur lors de la récupération du client' });
+    }
+    if (clientResults.length === 0) {
+      return res.status(404).json({ message: 'Client non trouvé' });
+    }
+
+    const client = {
+      ...clientResults[0],
+      total_credit: Number(clientResults[0].total_credit) || 0,
+      total_paid: Number(clientResults[0].total_paid) || 0,
+      remaining_debt: Number(clientResults[0].remaining_debt) || 0,
+      transaction_count: Number(clientResults[0].transaction_count) || 0
+    };
+
+    const transQuery = 'SELECT id, client_id, type, amount, date, description, created_at FROM client_transactions WHERE client_id = ? AND user_id = ? ORDER BY date DESC, id DESC';
+    db.query(transQuery, [clientId, req.user.id], (err2, transResults) => {
+      if (err2) {
+        console.error('Fetch client transactions error:', err2);
+        return res.status(500).json({ message: 'Erreur lors de la récupération des transactions' });
+      }
+
+      const transactions = transResults.map(t => ({
+        ...t,
+        amount: Number(t.amount) || 0
+      }));
+
+      res.json({
+        ...client,
+        transactions
+      });
+    });
+  });
+});
+
+// 4. UPDATE CLIENT INFORMATION
+app.put('/api/clients/:id', authenticateToken, (req, res) => {
+  const clientId = req.params.id;
+  const { name, phone, address, note } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ message: 'Le nom du client est requis' });
+  }
+  if (!phone || !phone.trim()) {
+    return res.status(400).json({ message: 'Le numéro de téléphone est requis' });
+  }
+
+  const cleanName = name.trim();
+  const cleanPhone = phone.trim();
+  const cleanAddress = address && address.trim() ? address.trim() : null;
+  const cleanNote = note && note.trim() ? note.trim() : null;
+
+  const query = 'UPDATE clients SET name = ?, phone = ?, address = ?, note = ? WHERE id = ? AND user_id = ?';
+  db.query(query, [cleanName, cleanPhone, cleanAddress, cleanNote, clientId, req.user.id], (err, result) => {
+    if (err) {
+      console.error('Update client error:', err);
+      return res.status(500).json({ message: 'Erreur lors de la modification du client' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Client non trouvé' });
+    }
+    res.json({ 
+      message: 'Client mis à jour avec succès', 
+      client: { id: Number(clientId), name: cleanName, phone: cleanPhone, address: cleanAddress, note: cleanNote } 
+    });
+  });
+});
+
+// 5. DELETE A CLIENT AND THEIR TRANSACTIONS
+app.delete('/api/clients/:id', authenticateToken, (req, res) => {
+  const clientId = req.params.id;
+  const query = 'DELETE FROM clients WHERE id = ? AND user_id = ?';
+  db.query(query, [clientId, req.user.id], (err, result) => {
+    if (err) {
+      console.error('Delete client error:', err);
+      return res.status(500).json({ message: 'Erreur lors de la suppression du client' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Client non trouvé' });
+    }
+    res.json({ message: 'Client supprimé avec succès' });
+  });
+});
+
+// 6. RECORD A CREDIT OR PAYMENT TRANSACTION
+app.post('/api/clients/:id/transactions', authenticateToken, (req, res) => {
+  const clientId = req.params.id;
+  const { type, amount, date, description } = req.body;
+
+  if (!type || !['credit', 'payment'].includes(type)) {
+    return res.status(400).json({ message: 'Type de transaction invalide (credit ou payment)' });
+  }
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) {
+    return res.status(400).json({ message: 'Le montant doit être un nombre positif' });
+  }
+
+  const transactionDate = date && String(date).trim() ? String(date).trim() : new Date().toISOString().split('T')[0];
+  const cleanDesc = description && description.trim() ? description.trim() : null;
+
+  // Verify client belongs to current user
+  db.query('SELECT id FROM clients WHERE id = ? AND user_id = ?', [clientId, req.user.id], (err, clientCheck) => {
+    if (err || clientCheck.length === 0) {
+      return res.status(404).json({ message: 'Client non trouvé' });
+    }
+
+    const query = 'INSERT INTO client_transactions (client_id, user_id, type, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(query, [clientId, req.user.id, type, numAmount, transactionDate, cleanDesc], (insertErr, result) => {
+      if (insertErr) {
+        console.error('Insert transaction error:', insertErr);
+        return res.status(500).json({ message: 'Erreur lors de l’enregistrement de la transaction' });
+      }
+
+      res.status(201).json({
+        id: result.insertId,
+        client_id: Number(clientId),
+        type,
+        amount: numAmount,
+        date: transactionDate,
+        description: cleanDesc,
+        created_at: new Date()
+      });
+    });
+  });
+});
+
+// 7. DELETE A SPECIFIC TRANSACTION
+app.delete('/api/transactions/:id', authenticateToken, (req, res) => {
+  const transId = req.params.id;
+  const query = 'DELETE FROM client_transactions WHERE id = ? AND user_id = ?';
+  db.query(query, [transId, req.user.id], (err, result) => {
+    if (err) {
+      console.error('Delete transaction error:', err);
+      return res.status(500).json({ message: 'Erreur lors de la suppression de la transaction' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Transaction non trouvée' });
+    }
+    res.json({ message: 'Transaction supprimée avec succès' });
   });
 });
 
