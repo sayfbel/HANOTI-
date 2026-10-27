@@ -131,7 +131,7 @@ export default function AddCardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <PageHeader title={isUpdate === 'true' ? "Update Payment Method" : "Add Payment Method"} showBackButton />
+      <PageHeader title={isUpdate === 'true' ? "Update Payment Method" : "Add Payment Method"} showBackButton fallbackRoute="/subscription" />
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

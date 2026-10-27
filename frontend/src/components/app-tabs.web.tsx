@@ -6,17 +6,21 @@ import Svg, { Path } from 'react-native-svg';
 import { ThemedText } from './themed-text';
 import { useTheme } from '../context/ThemeContext';
 
+import { useLanguage } from '../context/LanguageContext';
+
 export default function AppTabs() {
+  const { t } = useLanguage();
+
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="dashboard" href="/(tabs)/dashboard" asChild>
-            <TabButton IconComponent={Ionicons} iconName="home" label="Home" />
+            <TabButton IconComponent={Ionicons} iconName="home" label={t('tabs.home')} />
           </TabTrigger>
           <TabTrigger name="search" href="/(tabs)/search" asChild>
-            <TabButton IconComponent={Feather} iconName="search" label="Explore" />
+            <TabButton IconComponent={Feather} iconName="search" label={t('tabs.explore')} />
           </TabTrigger>
           
           <TabTrigger name="add" href="/(tabs)/add" asChild>
@@ -24,10 +28,10 @@ export default function AppTabs() {
           </TabTrigger>
           
           <TabTrigger name="add-client" href="/(tabs)/add-client" asChild>
-            <TabButton IconComponent={Feather} iconName="bell" label="Inbox" />
+            <TabButton IconComponent={Feather} iconName="bell" label={t('tabs.inbox')} />
           </TabTrigger>
           <TabTrigger name="profile" href="/(tabs)/profile" asChild>
-            <TabButton IconComponent={Feather} iconName="user" label="Profile" />
+            <TabButton IconComponent={Feather} iconName="user" label={t('tabs.profile')} />
           </TabTrigger>
         </CustomTabList>
       </TabList>

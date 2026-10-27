@@ -15,6 +15,7 @@ import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useAppAlert } from '../context/AlertContext';
+import { useLanguage } from '../context/LanguageContext';
 import { DateBox } from './ui/date-box';
 import { ClientData } from './ClientModal';
 
@@ -40,6 +41,7 @@ export function TransactionModal({
   const { colors, theme } = useTheme();
   const { token } = useAuth();
   const { showAlert } = useAppAlert();
+  const { t, isRTL, language } = useLanguage();
   const isDark = theme === 'dark';
 
   const isCredit = type === 'credit';
@@ -62,7 +64,11 @@ export function TransactionModal({
       }
       setAmount('');
       setDate(new Date().toISOString().split('T')[0]);
-      setDescription(isCredit ? 'Achats du jour' : 'Paiement reçu');
+      setDescription(
+        isCredit
+          ? t('modals.transaction.descriptionCreditPlaceholder')
+          : t('modals.transaction.descriptionPaymentPlaceholder')
+      );
 
       const timer = setTimeout(() => {
         amountInputRef.current?.focus();
@@ -90,13 +96,13 @@ export function TransactionModal({
   const handleSubmit = async () => {
     const targetClientId = client?.id || selectedClientId;
     if (!targetClientId) {
-      showAlert('error', 'Sélection requise', 'Veuillez sélectionner un client.');
+      showAlert('error', t('common.error'), t('modals.transaction.selectClientError'));
       return;
     }
 
     const numAmount = parseFloat(amount.replace(',', '.'));
     if (isNaN(numAmount) || numAmount <= 0) {
-      showAlert('error', 'Montant invalide', 'Veuillez saisir un montant supérieur à 0.');
+      showAlert('error', t('common.error'), t('modals.transaction.invalidAmountError'));
       amountInputRef.current?.focus();
       return;
     }
@@ -119,19 +125,20 @@ export function TransactionModal({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Erreur lors de l’enregistrement');
+        throw new Error(data.message || t('common.error'));
       }
 
+      const formattedNum = numAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR');
       showAlert(
         'success',
-        isCredit ? 'Crédit ajouté' : 'Paiement enregistré',
-        `${isCredit ? '+' : '-'}${numAmount.toLocaleString('fr-FR')} DH enregistré avec succès.`
+        isCredit ? t('modals.transaction.titleCredit') : t('modals.transaction.titlePayment'),
+        `${isCredit ? '+' : '-'}${formattedNum} DH ${isCredit ? t('modals.transaction.successCredit') : t('modals.transaction.successPayment')}`
       );
       onSuccess(data);
       onClose();
     } catch (err: any) {
       console.error(err);
-      showAlert('error', 'Erreur', err.message || 'Impossible d’enregistrer la transaction.');
+      showAlert('error', t('common.error'), err.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -155,8 +162,8 @@ export function TransactionModal({
           ]}
         >
           {/* Header */}
-          <View style={styles.modalHeader}>
-            <View style={styles.headerTitleGroup}>
+          <View style={[styles.modalHeader, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={[styles.headerTitleGroup, isRTL && { flexDirection: 'row-reverse' }]}>
               <View
                 style={[
                   styles.headerIconCircle,
@@ -174,11 +181,11 @@ export function TransactionModal({
                 )}
               </View>
               <View>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {isCredit ? 'Ajouter un crédit' : 'Enregistrer un paiement'}
+                <Text style={[styles.modalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+                  {isCredit ? t('modals.transaction.titleCredit') : t('modals.transaction.titlePayment')}
                 </Text>
-                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                  {isCredit ? 'Augmente la dette du client' : 'Diminue la dette du client'}
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                  {isCredit ? t('modals.transaction.subtitleCredit') : t('modals.transaction.subtitlePayment')}
                 </Text>
               </View>
             </View>
@@ -195,10 +202,12 @@ export function TransactionModal({
             {/* Client selector if global */}
             {!client && (
               <View style={styles.fieldWrapper}>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>CLIENT CONCERNÉ</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                  {t('modals.transaction.clientConcerned')}
+                </Text>
                 {clientsList.length === 0 ? (
-                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                    Aucun client disponible. Veuillez d'abord ajouter un client.
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: isRTL ? 'right' : 'left' }}>
+                    {t('modals.transaction.noClients')}
                   </Text>
                 ) : (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
@@ -247,19 +256,21 @@ export function TransactionModal({
               ]}
               onPress={() => amountInputRef.current?.focus()}
             >
-              <View style={styles.amountHeaderLabelRow}>
+              <View style={[styles.amountHeaderLabelRow, isRTL && { flexDirection: 'row-reverse' }]}>
                 <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                  MONTANT DE L'OPÉRATION
+                  {t('modals.transaction.amountLabel')}
                 </Text>
                 {!!amount && (
-                  <Pressable onPress={clearAmount} style={styles.clearAmountBtn}>
+                  <Pressable onPress={clearAmount} style={[styles.clearAmountBtn, isRTL && { flexDirection: 'row-reverse' }]}>
                     <Feather name="x-circle" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.clearAmountText, { color: colors.textSecondary }]}>Effacer</Text>
+                    <Text style={[styles.clearAmountText, { color: colors.textSecondary }]}>
+                      {t('modals.transaction.clear')}
+                    </Text>
                   </Pressable>
                 )}
               </View>
 
-              <View style={styles.amountInputRow}>
+              <View style={[styles.amountInputRow, isRTL && { flexDirection: 'row-reverse' }]}>
                 <Text style={[styles.amountSign, { color: primaryAccent }]}>
                   {isCredit ? '+' : '-'}
                 </Text>
@@ -285,7 +296,7 @@ export function TransactionModal({
               </View>
 
               {/* Quick Amount Presets */}
-              <View style={styles.presetRow}>
+              <View style={[styles.presetRow, isRTL && { flexDirection: 'row-reverse' }]}>
                 {PRESET_AMOUNTS.map((preset) => (
                   <Pressable
                     key={preset}
@@ -306,26 +317,40 @@ export function TransactionModal({
 
             {/* Date */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>DATE DE TRANSACTION</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.transaction.dateLabel')}
+              </Text>
               <DateBox value={date} onChange={setDate} placeholder="YYYY-MM-DD" />
             </View>
 
             {/* Description / Note */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>MOTIF / NOTE</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.transaction.descriptionLabel')}
+              </Text>
               <View
                 style={[
                   styles.inputContainer,
+                  isRTL && { flexDirection: 'row-reverse' },
                   {
                     backgroundColor: isDark ? '#0F131C' : '#F8FAFC',
                     borderColor: isDark ? '#263044' : '#E2E8F0',
                   },
                 ]}
               >
-                <Feather name="file-text" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <Feather
+                  name="file-text"
+                  size={18}
+                  color={colors.textSecondary}
+                  style={[styles.inputIcon, isRTL ? { marginRight: 0, marginLeft: 10 } : { marginRight: 10 }]}
+                />
                 <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder={isCredit ? 'Ex: Achats du jour, épicerie' : 'Ex: Acompte ou versement reçu'}
+                  style={[styles.textInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+                  placeholder={
+                    isCredit
+                      ? t('modals.transaction.descriptionCreditPlaceholder')
+                      : t('modals.transaction.descriptionPaymentPlaceholder')
+                  }
                   placeholderTextColor={colors.textSecondary}
                   value={description}
                   onChangeText={setDescription}
@@ -338,6 +363,7 @@ export function TransactionModal({
           <View
             style={[
               styles.actionsRow,
+              isRTL && { flexDirection: 'row-reverse' },
               { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
             ]}
           >
@@ -352,7 +378,7 @@ export function TransactionModal({
               onPress={onClose}
               disabled={loading}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>Annuler</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>{t('modals.transaction.cancel')}</Text>
             </Pressable>
 
             <Pressable
@@ -367,7 +393,7 @@ export function TransactionModal({
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {isCredit ? 'Valider le crédit' : 'Confirmer le paiement'}
+                  {isCredit ? t('modals.transaction.submitCredit') : t('modals.transaction.submitPayment')}
                 </Text>
               )}
             </Pressable>

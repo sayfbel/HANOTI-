@@ -13,7 +13,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<SupportedLanguage>('en'); // Default to English
+  const [language, setLanguageState] = useState<SupportedLanguage>('ar'); // Default to Arabic
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,12 +23,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         const storedLang = await AsyncStorage.getItem('appLanguage');
         if (storedLang && ['en', 'fr', 'ar'].includes(storedLang)) {
           setLanguageState(storedLang as SupportedLanguage);
-          
-          // Basic RTL handling (requires app reload on actual native devices, but good to track)
           const isRTL = storedLang === 'ar';
           if (I18nManager.isRTL !== isRTL) {
             I18nManager.allowRTL(isRTL);
             I18nManager.forceRTL(isRTL);
+          }
+        } else {
+          // Default to Arabic and force RTL if not already set
+          setLanguageState('ar');
+          if (!I18nManager.isRTL) {
+            I18nManager.allowRTL(true);
+            I18nManager.forceRTL(true);
           }
         }
       } catch (e) {

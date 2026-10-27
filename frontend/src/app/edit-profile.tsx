@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { DateBox } from '../components/ui/date-box';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -17,7 +18,8 @@ import { useAppAlert } from '../context/AlertContext';
 export default function EditProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { updateUser, refreshUser } = useAuth();
   const { showAlert } = useAppAlert();
   
   const [firstName, setFirstName] = useState('');
@@ -98,7 +100,7 @@ export default function EditProfileScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/'); // Fallback to home if there is no history
+      router.replace('/settings'); // Fallback to settings if there is no history
     }
   };
 
@@ -134,7 +136,7 @@ export default function EditProfileScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        showAlert('error', "Error", "You are not fully authenticated.");
+        showAlert('error', t('common.error'), t('editProfile.sessionExpired'));
         setUploadingImage(false);
         return;
       }
@@ -142,9 +144,9 @@ export default function EditProfileScreen() {
       let formData = new FormData();
       
       if (Platform.OS === 'web') {
-        // Web requires Blob instead of uri object
         const response = await fetch(uri);
-        const blob = await response.blob();
+        const rawBlob = await response.blob();
+        const blob = new Blob([rawBlob], { type: rawBlob.type || 'image/jpeg' });
         formData.append('avatar', blob, 'profile.jpg');
       } else {
         // Mobile requires the specific object format
@@ -167,32 +169,58 @@ export default function EditProfileScreen() {
       const data = await res.json();
       if (res.ok) {
         setAvatarUrl(`http://localhost:3000${data.avatar_url}`);
-        showAlert('success', "Success", "Profile image updated successfully");
+        updateUser({ avatar_url: data.avatar_url });
+        refreshUser();
+        showAlert(
+          'success',
+          t('common.success'),
+          t('editProfile.photoUpdated')
+        );
       } else {
-        showAlert('error', "Error", data.message || "Failed to upload image");
+        showAlert(
+          'error',
+          t('common.error'),
+          data.message || t('editProfile.photoUploadFailed')
+        );
       }
     } catch (error) {
       console.error("Upload error:", error);
-      showAlert('error', "Error", "Could not upload image. Ensure backend is running and accepts multipart data.");
+      showAlert(
+        'error',
+        t('common.error'),
+        t('editProfile.photoUploadError')
+      );
     } finally {
       setUploadingImage(false);
     }
   };
 
   const validateInputs = () => {
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[A-Za-z\u0600-\u06FF\s]+$/;
     if (firstName && !nameRegex.test(firstName)) {
-      showAlert('error', "Validation Error", "First name must contain only letters.");
+      showAlert(
+        'error',
+        t('common.error'),
+        t('editProfile.firstNameLetters')
+      );
       return false;
     }
     if (lastName && !nameRegex.test(lastName)) {
-      showAlert('error', "Validation Error", "Last name must contain only letters.");
+      showAlert(
+        'error',
+        t('common.error'),
+        t('editProfile.lastNameLetters')
+      );
       return false;
     }
 
     const phoneRegex = /^(?:\+212|0)[5-7]\d{8}$/;
     if (phoneNumber && !phoneRegex.test(phoneNumber)) {
-      showAlert('error', "Validation Error", "Phone number must be a valid Moroccan number (e.g. 0612345678).");
+      showAlert(
+        'error',
+        t('common.error'),
+        t('editProfile.phoneInvalid')
+      );
       return false;
     }
 
@@ -206,7 +234,11 @@ export default function EditProfileScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        showAlert('error', "Error", "You are not fully authenticated. Please log in again.");
+        showAlert(
+          'error',
+          t('editProfile.sessionExpired'),
+          t('editProfile.relogin')
+        );
         setSaving(false);
         return;
       }
@@ -226,14 +258,33 @@ export default function EditProfileScreen() {
       });
       
       if (res.ok) {
-        showAlert('success', "Success", "Profile updated successfully");
+        updateUser({
+          first_name: firstName,
+          last_name: lastName,
+          birthday: birthday,
+          phone_number: phoneNumber,
+        });
+        refreshUser();
+        showAlert(
+          'success',
+          t('common.success'),
+          t('editProfile.profileUpdated')
+        );
         navigateBack();
       } else {
         const data = await res.json();
-        showAlert('error', "Error", data.message || "Failed to update profile");
+        showAlert(
+          'error',
+          t('common.error'),
+          data.message || t('editProfile.profileUpdateFailed')
+        );
       }
     } catch (err) {
-      showAlert('error', "Error", "Could not reach server");
+      showAlert(
+        'error',
+        t('common.error'),
+        t('editProfile.serverError')
+      );
     } finally {
       setSaving(false);
     }

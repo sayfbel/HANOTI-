@@ -120,7 +120,7 @@ export default function SubscriptionScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <PageHeader title={t('subscription.title')} showBackButton />
+      <PageHeader title={t('subscription.title')} showBackButton fallbackRoute="/settings" />
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
@@ -409,6 +409,9 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   addIcon: {
     opacity: 0.8,
+  },
+  cardArrow: {
+    marginLeft: 'auto',
   },
   divider: {
     height: 1,

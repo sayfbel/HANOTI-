@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useSegments, useRouter }
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AppThemeProvider } from '@/context/ThemeContext';
@@ -19,7 +20,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const isIndex = !segments[0] || segments[0] === 'index';
+    const isIndex = !segments[0] || (segments[0] as string) === 'index';
     const isPublicGroup = isIndex || segments[0] === 'login' || segments[0] === 'forgot-password' || segments[0] === 'thanks';
     const inAuthGroup = !isPublicGroup;
 
@@ -60,6 +61,17 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [fontsLoaded] = useFonts({
+    'Thmanyah-Bold': require('../../assets/fonts/Thmanyah-Bold.otf'),
+    'Thmanyah-Regular': require('../../assets/fonts/Thmanyah-Regular.otf'),
+    'Inter-Regular': require('../../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Bold': require('../../assets/fonts/Inter-Bold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <AuthProvider>
       <LanguageProvider>

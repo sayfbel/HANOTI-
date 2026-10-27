@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useAppAlert } from '../context/AlertContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export interface ClientData {
   id?: number;
@@ -40,6 +41,7 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
   const { colors, theme } = useTheme();
   const { token } = useAuth();
   const { showAlert } = useAppAlert();
+  const { t, isRTL } = useLanguage();
   const isDark = theme === 'dark';
 
   const [name, setName] = useState('');
@@ -66,11 +68,11 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      showAlert('error', 'Champ requis', 'Veuillez saisir le nom complet du client.');
+      showAlert('error', t('common.error'), t('modals.client.errorName'));
       return;
     }
     if (!phone.trim()) {
-      showAlert('error', 'Champ requis', 'Veuillez saisir le numéro de téléphone.');
+      showAlert('error', t('common.error'), t('modals.client.errorPhone'));
       return;
     }
 
@@ -97,15 +99,15 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Erreur lors de l’enregistrement');
+        throw new Error(data.message || t('common.error'));
       }
 
-      showAlert('success', 'Succès', isEditing ? 'Client mis à jour avec succès.' : 'Nouveau client ajouté au carnet.');
+      showAlert('success', t('common.success'), isEditing ? t('modals.client.successEdit') : t('modals.client.successAdd'));
       onSuccess(data.client || data);
       onClose();
     } catch (err: any) {
       console.error(err);
-      showAlert('error', 'Erreur', err.message || 'Impossible d’enregistrer le client.');
+      showAlert('error', t('common.error'), err.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -129,8 +131,8 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
           ]}
         >
           {/* Header Banner */}
-          <View style={styles.modalHeader}>
-            <View style={styles.headerTitleGroup}>
+          <View style={[styles.modalHeader, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={[styles.headerTitleGroup, isRTL && { flexDirection: 'row-reverse' }]}>
               <View
                 style={[
                   styles.headerIconCircle,
@@ -140,11 +142,11 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
                 <Feather name={isEditing ? 'edit-3' : 'user-plus'} size={20} color={colors.primary} />
               </View>
               <View>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {isEditing ? 'Modifier la fiche client' : 'Nouveau client'}
+                <Text style={[styles.modalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+                  {isEditing ? t('modals.client.titleEdit') : t('modals.client.titleNew')}
                 </Text>
-                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                  {isEditing ? 'Mettez à jour les coordonnées' : 'Ajoutez un client à votre carnet'}
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                  {isEditing ? t('modals.client.subtitleEdit') : t('modals.client.subtitleNew')}
                 </Text>
               </View>
             </View>
@@ -160,22 +162,28 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formContent}>
             {/* Nom complet */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                NOM COMPLET <Text style={styles.requiredStar}>*</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.client.nameLabel')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <View
                 style={[
                   styles.inputContainer,
+                  isRTL && { flexDirection: 'row-reverse' },
                   {
                     backgroundColor: isDark ? '#0F131C' : '#F8FAFC',
                     borderColor: isDark ? '#263044' : '#E2E8F0',
                   },
                 ]}
               >
-                <Feather name="user" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <Feather
+                  name="user"
+                  size={18}
+                  color={colors.textSecondary}
+                  style={[styles.inputIcon, isRTL ? { marginRight: 0, marginLeft: 10 } : { marginRight: 10 }]}
+                />
                 <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder="Ex: Yassine Benali"
+                  style={[styles.textInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+                  placeholder={t('modals.client.namePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   value={name}
                   onChangeText={setName}
@@ -186,22 +194,28 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
 
             {/* Numéro de téléphone */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                NUMÉRO DE TÉLÉPHONE <Text style={styles.requiredStar}>*</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.client.phoneLabel')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <View
                 style={[
                   styles.inputContainer,
+                  isRTL && { flexDirection: 'row-reverse' },
                   {
                     backgroundColor: isDark ? '#0F131C' : '#F8FAFC',
                     borderColor: isDark ? '#263044' : '#E2E8F0',
                   },
                 ]}
               >
-                <Feather name="phone" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <Feather
+                  name="phone"
+                  size={18}
+                  color={colors.textSecondary}
+                  style={[styles.inputIcon, isRTL ? { marginRight: 0, marginLeft: 10 } : { marginRight: 10 }]}
+                />
                 <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder="Ex: 06 12 34 56 78"
+                  style={[styles.textInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+                  placeholder={t('modals.client.phonePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   value={phone}
                   onChangeText={setPhone}
@@ -212,22 +226,28 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
 
             {/* Adresse */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                ADRESSE <Text style={styles.optionalText}>(Optionnel)</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.client.addressLabel')} <Text style={styles.optionalText}>{t('modals.client.optional')}</Text>
               </Text>
               <View
                 style={[
                   styles.inputContainer,
+                  isRTL && { flexDirection: 'row-reverse' },
                   {
                     backgroundColor: isDark ? '#0F131C' : '#F8FAFC',
                     borderColor: isDark ? '#263044' : '#E2E8F0',
                   },
                 ]}
               >
-                <Feather name="map-pin" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <Feather
+                  name="map-pin"
+                  size={18}
+                  color={colors.textSecondary}
+                  style={[styles.inputIcon, isRTL ? { marginRight: 0, marginLeft: 10 } : { marginRight: 10 }]}
+                />
                 <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder="Ex: Quartier Maarif, Rue 14"
+                  style={[styles.textInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+                  placeholder={t('modals.client.addressPlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   value={address}
                   onChangeText={setAddress}
@@ -237,13 +257,14 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
 
             {/* Note */}
             <View style={styles.fieldWrapper}>
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                REMARQUE / NOTE <Text style={styles.optionalText}>(Optionnel)</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                {t('modals.client.noteLabel')} <Text style={styles.optionalText}>{t('modals.client.optional')}</Text>
               </Text>
               <View
                 style={[
                   styles.inputContainer,
                   styles.textAreaContainer,
+                  isRTL && { flexDirection: 'row-reverse' },
                   {
                     backgroundColor: isDark ? '#0F131C' : '#F8FAFC',
                     borderColor: isDark ? '#263044' : '#E2E8F0',
@@ -251,8 +272,8 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
                 ]}
               >
                 <TextInput
-                  style={[styles.textInput, styles.textAreaInput, { color: colors.text }]}
-                  placeholder="Notes personnelles sur le client ou ses habitudes de paiement..."
+                  style={[styles.textInput, styles.textAreaInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+                  placeholder={t('modals.client.notePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   value={note}
                   onChangeText={setNote}
@@ -267,6 +288,7 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
           <View
             style={[
               styles.actionsRow,
+              isRTL && { flexDirection: 'row-reverse' },
               { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
             ]}
           >
@@ -281,7 +303,7 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
               onPress={onClose}
               disabled={loading}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>Annuler</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>{t('modals.client.cancel')}</Text>
             </Pressable>
 
             <Pressable
@@ -296,7 +318,7 @@ export function ClientModal({ visible, client, onClose, onSuccess }: ClientModal
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {isEditing ? 'Enregistrer les modifications' : 'Ajouter le client'}
+                  {isEditing ? t('modals.client.saveChanges') : t('modals.client.addClient')}
                 </Text>
               )}
             </Pressable>

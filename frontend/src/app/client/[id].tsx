@@ -17,6 +17,8 @@ import * as Animatable from 'react-native-animatable';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useAppAlert } from '@/context/AlertContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { ClientModal, ClientData } from '@/components/ClientModal';
 import { TransactionModal } from '@/components/TransactionModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
@@ -41,7 +43,16 @@ export default function ClientProfileScreen() {
   const { colors, theme } = useTheme();
   const { token } = useAuth();
   const { showAlert } = useAppAlert();
+  const { t, language, isRTL } = useLanguage();
   const isDark = theme === 'dark';
+
+  const navigateBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/search');
+    }
+  }, [router]);
 
   const [client, setClient] = useState<ClientProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,7 +113,7 @@ export default function ClientProfileScreen() {
       }
       showAlert('success', 'Client supprimé', 'Le client et ses transactions ont été supprimés.');
       setDeleteClientModalVisible(false);
-      router.back();
+      navigateBack();
     } catch (err: any) {
       showAlert('error', 'Erreur', err.message);
     } finally {
@@ -174,7 +185,7 @@ export default function ClientProfileScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#0A0E17' : '#F8FAFC' }]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement de la fiche client...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('clientProfile.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -185,9 +196,9 @@ export default function ClientProfileScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#0A0E17' : '#F8FAFC' }]}>
         <View style={styles.centerContainer}>
           <Feather name="alert-circle" size={48} color="#EF4444" />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>Client introuvable</Text>
-          <Pressable style={[styles.backBtn, { backgroundColor: colors.primary }]} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>Retour à l'Explorateur</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('clientProfile.notFound')}</Text>
+          <Pressable style={[styles.backBtn, { backgroundColor: colors.primary }]} onPress={navigateBack}>
+            <Text style={styles.backBtnText}>{t('clientProfile.backToExplorer')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -201,36 +212,47 @@ export default function ClientProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#0A0E17' : '#F8FAFC' }]}>
-      {/* 1. TOP NAV BAR */}
-      <View
-        style={[
-          styles.topBar,
-          {
-            backgroundColor: isDark ? '#101522' : '#FFFFFF',
-            borderBottomColor: isDark ? '#1C2433' : '#E2E8F0',
-          },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={styles.navBackBtn}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-          <Text style={[styles.navBackText, { color: colors.text }]}>Retour</Text>
-        </Pressable>
-
-        <View style={styles.topActions}>
-          <Pressable
-            style={[styles.topActionBtn, { backgroundColor: isDark ? '#1A2232' : '#F1F5F9' }]}
-            onPress={() => setEditModalVisible(true)}
-          >
-            <Feather name="edit-2" size={17} color={colors.text} />
-          </Pressable>
-          <Pressable
-            style={[styles.topActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}
-            onPress={() => setDeleteClientModalVisible(true)}
-          >
-            <Feather name="trash-2" size={17} color="#EF4444" />
-          </Pressable>
-        </View>
-      </View>
+      {/* Universal Subpage Header */}
+      <AppHeader
+        variant="subpage"
+        title={client.name}
+        showBackButton={true}
+        onBack={navigateBack}
+        rightActions={
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.topActionBtn,
+                {
+                  backgroundColor: isDark ? '#141A26' : '#FFFFFF',
+                  borderColor: isDark ? '#232D3F' : '#E2E8F0',
+                  borderWidth: 1,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => setEditModalVisible(true)}
+              accessibilityLabel={t('clientProfile.edit')}
+            >
+              <Feather name="edit-2" size={16} color={isDark ? '#F8FAFC' : '#0F172A'} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.topActionBtn,
+                {
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+                  borderColor: isDark ? '#7F1D1D' : '#FECACA',
+                  borderWidth: 1,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => setDeleteClientModalVisible(true)}
+              accessibilityLabel={t('clientProfile.delete')}
+            >
+              <Feather name="trash-2" size={16} color="#EF4444" />
+            </Pressable>
+          </View>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -283,11 +305,11 @@ export default function ClientProfileScreen() {
           <View style={styles.quickContactPills}>
             <Pressable style={[styles.contactPill, { backgroundColor: '#10B981' }]} onPress={openWhatsApp}>
               <FontAwesome5 name="whatsapp" size={15} color="#FFFFFF" />
-              <Text style={styles.contactPillText}>WhatsApp</Text>
+              <Text style={styles.contactPillText}>{t('clientProfile.whatsapp')}</Text>
             </Pressable>
             <Pressable style={[styles.contactPill, { backgroundColor: colors.primary }]} onPress={openCall}>
               <Feather name="phone-call" size={15} color="#FFFFFF" />
-              <Text style={styles.contactPillText}>Appeler</Text>
+              <Text style={styles.contactPillText}>{t('clientProfile.call')}</Text>
             </Pressable>
           </View>
         </Animatable.View>
@@ -326,7 +348,7 @@ export default function ClientProfileScreen() {
                   { color: hasDebt ? '#EA580C' : '#059669' },
                 ]}
               >
-                RESTE À PAYER
+                {t('clientProfile.remainingDue')}
               </Text>
               <View
                 style={[
@@ -335,7 +357,7 @@ export default function ClientProfileScreen() {
                 ]}
               >
                 <Text style={styles.statusBadgeText}>
-                  {hasDebt ? 'Dette active' : 'Compte Soldé'}
+                  {hasDebt ? t('clientProfile.activeDebt') : t('clientProfile.settledAccount')}
                 </Text>
               </View>
             </View>
@@ -356,7 +378,7 @@ export default function ClientProfileScreen() {
             <View style={[styles.subMetricCell, { borderRightWidth: 1, borderRightColor: isDark ? '#232D3F' : '#E2E8F0' }]}>
               <View style={styles.subMetricLabelRow}>
                 <View style={[styles.tinyDot, { backgroundColor: '#F97316' }]} />
-                <Text style={[styles.subMetricLabel, { color: colors.textSecondary }]}>DETTE TOTALE</Text>
+                <Text style={[styles.subMetricLabel, { color: colors.textSecondary }]}>{t('clientProfile.totalDebt')}</Text>
               </View>
               <Text style={[styles.subMetricValue, { color: colors.text }]}>
                 {totalCredit.toLocaleString('fr-FR')} <Text style={styles.subMetricUnit}>DH</Text>
@@ -367,7 +389,7 @@ export default function ClientProfileScreen() {
             <View style={styles.subMetricCell}>
               <View style={styles.subMetricLabelRow}>
                 <View style={[styles.tinyDot, { backgroundColor: '#10B981' }]} />
-                <Text style={[styles.subMetricLabel, { color: colors.textSecondary }]}>TOTAL PAYÉ</Text>
+                <Text style={[styles.subMetricLabel, { color: colors.textSecondary }]}>{t('clientProfile.totalPaid')}</Text>
               </View>
               <Text style={[styles.subMetricValue, { color: '#10B981' }]}>
                 {totalPaid.toLocaleString('fr-FR')} <Text style={styles.subMetricUnit}>DH</Text>
@@ -386,7 +408,7 @@ export default function ClientProfileScreen() {
             }}
           >
             <Feather name="plus-circle" size={19} color="#FFFFFF" />
-            <Text style={styles.primaryActionBtnText}>Ajouter un crédit</Text>
+            <Text style={styles.primaryActionBtnText}>{t('clientProfile.addCredit')}</Text>
           </Pressable>
 
           <Pressable
@@ -397,7 +419,7 @@ export default function ClientProfileScreen() {
             }}
           >
             <FontAwesome5 name="hand-holding-usd" size={17} color="#FFFFFF" />
-            <Text style={styles.primaryActionBtnText}>Enregistrer un paiement</Text>
+            <Text style={styles.primaryActionBtnText}>{t('clientProfile.recordPayment')}</Text>
           </Pressable>
         </View>
 
@@ -417,33 +439,33 @@ export default function ClientProfileScreen() {
               { borderBottomColor: isDark ? '#1E2738' : '#F1F5F9' },
             ]}
           >
-            <Text style={[styles.infoSectionTitle, { color: colors.text }]}>Informations du client</Text>
+            <Text style={[styles.infoSectionTitle, { color: colors.text }]}>{t('clientProfile.clientInfo')}</Text>
             <Pressable style={styles.editActionLink} onPress={() => setEditModalVisible(true)}>
               <Feather name="edit-2" size={13} color={colors.primary} />
-              <Text style={[styles.editActionLinkText, { color: colors.primary }]}>Modifier</Text>
+              <Text style={[styles.editActionLinkText, { color: colors.primary }]}>{t('clientProfile.edit')}</Text>
             </Pressable>
           </View>
 
           <View style={styles.infoFieldsList}>
             <View style={styles.infoFieldRow}>
-              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>Nom complet</Text>
+              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>{t('clientProfile.fullName')}</Text>
               <Text style={[styles.infoFieldValue, { color: colors.text }]}>{client.name}</Text>
             </View>
 
             <View style={styles.infoFieldRow}>
-              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>Téléphone</Text>
+              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>{t('clientProfile.phone')}</Text>
               <Text style={[styles.infoFieldValue, { color: colors.text }]}>{client.phone}</Text>
             </View>
 
             <View style={styles.infoFieldRow}>
-              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>Adresse</Text>
+              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>{t('clientProfile.address')}</Text>
               <Text style={[styles.infoFieldValue, { color: colors.text }]}>
-                {client.address || 'Non renseignée'}
+                {client.address || t('clientProfile.notSpecified')}
               </Text>
             </View>
 
             <View style={styles.infoFieldRow}>
-              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>Date d'ajout</Text>
+              <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>{t('clientProfile.dateAdded')}</Text>
               <Text style={[styles.infoFieldValue, { color: colors.text }]}>
                 {formatDateDisplay(client.created_at)}
               </Text>
@@ -451,7 +473,7 @@ export default function ClientProfileScreen() {
 
             {!!client.note && (
               <View style={styles.infoFieldRow}>
-                <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>Note</Text>
+                <Text style={[styles.infoFieldLabel, { color: colors.textSecondary }]}>{t('clientProfile.note')}</Text>
                 <Text style={[styles.infoFieldValue, { color: colors.text }]}>{client.note}</Text>
               </View>
             )}
@@ -463,10 +485,10 @@ export default function ClientProfileScreen() {
           <View style={styles.timelineHeaderRow}>
             <View>
               <Text style={[styles.timelineSectionTitle, { color: colors.text }]}>
-                Historique des transactions
+                {t('clientProfile.transactionHistory')}
               </Text>
               <Text style={[styles.timelineSubtitle, { color: colors.textSecondary }]}>
-                Journal chronologique des crédits et encaissements
+                {t('clientProfile.transactionHistorySubtitle')}
               </Text>
             </View>
 
@@ -474,7 +496,7 @@ export default function ClientProfileScreen() {
             <View style={styles.timelineFilterTabs}>
               {(['all', 'credit', 'payment'] as const).map((tabKey) => {
                 const isSelected = transFilter === tabKey;
-                const label = tabKey === 'all' ? 'Tous' : tabKey === 'credit' ? 'Crédits' : 'Paiements';
+                const label = tabKey === 'all' ? t('clientProfile.all') : tabKey === 'credit' ? t('clientProfile.credits') : t('clientProfile.payments');
                 return (
                   <Pressable
                     key={tabKey}
@@ -513,10 +535,10 @@ export default function ClientProfileScreen() {
             >
               <Feather name="clock" size={32} color={colors.textSecondary} />
               <Text style={[styles.emptyTimelineTitle, { color: colors.text }]}>
-                Aucune transaction enregistrée
+                {t('clientProfile.noTransactions')}
               </Text>
               <Text style={[styles.emptyTimelineDesc, { color: colors.textSecondary }]}>
-                Ajoutez un crédit ou un versement pour commencer à suivre les mouvements financiers.
+                {t('clientProfile.noTransactionsDesc')}
               </Text>
             </View>
           ) : (
@@ -529,19 +551,19 @@ export default function ClientProfileScreen() {
                 },
               ]}
             >
-              {filteredTransactions.map((t, idx) => {
-                const isCredit = t.type === 'credit';
+              {filteredTransactions.map((tItem, idx) => {
+                const isCredit = tItem.type === 'credit';
                 const isLast = idx === filteredTransactions.length - 1;
 
                 return (
-                  <View key={t.id} style={styles.timelineRow}>
+                  <View key={tItem.id} style={styles.timelineRow}>
                     {/* Left Column: Date */}
                     <View style={styles.timelineDateColumn}>
                       <Text style={[styles.timelineDateDay, { color: colors.text }]}>
-                        {formatDateDisplay(t.date).slice(0, 5)}
+                        {formatDateDisplay(tItem.date).slice(0, 5)}
                       </Text>
                       <Text style={[styles.timelineDateYear, { color: colors.textSecondary }]}>
-                        {formatDateDisplay(t.date).slice(6)}
+                        {formatDateDisplay(tItem.date).slice(6)}
                       </Text>
                     </View>
 
@@ -571,11 +593,11 @@ export default function ClientProfileScreen() {
                       <View style={styles.timelineMainLine}>
                         <View>
                           <Text style={[styles.timelineTypeTitle, { color: colors.text }]}>
-                            {isCredit ? 'Crédit accordé' : 'Paiement reçu'}
+                            {isCredit ? t('clientProfile.creditGranted') : t('clientProfile.paymentReceived')}
                           </Text>
-                          {!!t.description && (
+                          {!!tItem.description && (
                             <Text style={[styles.timelineDescText, { color: colors.textSecondary }]}>
-                              {t.description}
+                              {tItem.description}
                             </Text>
                           )}
                         </View>
@@ -588,13 +610,13 @@ export default function ClientProfileScreen() {
                             ]}
                           >
                             {isCredit ? '+' : '-'}
-                            {t.amount.toLocaleString('fr-FR')} DH
+                            {tItem.amount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR')} DH
                           </Text>
 
                           <Pressable
                             style={styles.deleteTransIconBtn}
                             onPress={() => {
-                              setTransToDelete(t.id);
+                              setTransToDelete(tItem.id);
                               setDeleteTransModalVisible(true);
                             }}
                           >
@@ -629,8 +651,8 @@ export default function ClientProfileScreen() {
 
       <DeleteConfirmModal
         visible={deleteClientModalVisible}
-        title="Supprimer ce client ?"
-        message="Cette action supprimera définitivement le profil et toutes les transactions liées à ce client."
+        title={t('clients.deleteTitle')}
+        message={t('clients.deleteMessage')}
         loading={actionLoading}
         onCancel={() => setDeleteClientModalVisible(false)}
         onConfirm={handleDeleteClient}
@@ -638,8 +660,8 @@ export default function ClientProfileScreen() {
 
       <DeleteConfirmModal
         visible={deleteTransModalVisible}
-        title="Supprimer cette transaction ?"
-        message="Cette action recalculera automatiquement les soldes et la dette restante du client."
+        title={t('clientProfile.deleteTransactionTitle')}
+        message={t('clientProfile.deleteTransactionMessage')}
         loading={actionLoading}
         onCancel={() => {
           setDeleteTransModalVisible(false);

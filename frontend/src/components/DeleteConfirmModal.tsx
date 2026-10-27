@@ -2,12 +2,15 @@ import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DeleteConfirmModalProps {
   visible: boolean;
   title: string;
   message: string;
   loading?: boolean;
+  cancelText?: string;
+  confirmText?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -17,10 +20,13 @@ export function DeleteConfirmModal({
   title,
   message,
   loading = false,
+  cancelText,
+  confirmText,
   onCancel,
   onConfirm,
 }: DeleteConfirmModalProps) {
   const { colors, theme } = useTheme();
+  const { t, isRTL } = useLanguage();
   const isDark = theme === 'dark';
 
   return (
@@ -42,7 +48,7 @@ export function DeleteConfirmModal({
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
 
-          <View style={styles.buttonRow}>
+          <View style={[styles.buttonRow, isRTL && { flexDirection: 'row-reverse' }]}>
             <Pressable
               style={[
                 styles.cancelBtn,
@@ -54,7 +60,9 @@ export function DeleteConfirmModal({
               onPress={onCancel}
               disabled={loading}
             >
-              <Text style={[styles.cancelText, { color: colors.text }]}>Annuler</Text>
+              <Text style={[styles.cancelText, { color: colors.text }]}>
+                {cancelText || t('common.cancel')}
+              </Text>
             </Pressable>
 
             <Pressable
@@ -65,7 +73,9 @@ export function DeleteConfirmModal({
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.deleteText}>Supprimer</Text>
+                <Text style={styles.deleteText}>
+                  {confirmText || t('common.delete')}
+                </Text>
               )}
             </Pressable>
           </View>

@@ -1,68 +1,46 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useTheme } from '../../context/ThemeContext';
+import { AppHeader } from './AppHeader';
 
 interface PageHeaderProps {
   title: string;
+  subtitle?: string;
   showBackButton?: boolean;
   onBack?: () => void;
+  fallbackRoute?: string;
   rightComponent?: React.ReactNode;
+  showBrand?: boolean;
+  showStatusPill?: boolean;
+  showThemeToggle?: boolean;
+  showNotifications?: boolean;
 }
 
-export function PageHeader({ title, showBackButton = false, onBack, rightComponent }: PageHeaderProps) {
-  const router = useRouter();
-  const { colors } = useTheme();
-
+export function PageHeader({
+  title,
+  subtitle,
+  showBackButton = false,
+  onBack,
+  fallbackRoute,
+  rightComponent,
+  showBrand,
+  showStatusPill,
+  showThemeToggle,
+  showNotifications,
+}: PageHeaderProps) {
   return (
-    <View style={styles.header}>
-      {showBackButton ? (
-        <Pressable onPress={onBack || (() => router.back())} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
-        </Pressable>
-      ) : (
-        <View style={styles.backButtonPlaceholder} />
-      )}
-      
-      <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
-      
-      <View style={styles.headerRight}>
-        {rightComponent}
-      </View>
-    </View>
+    <AppHeader
+      variant={showBackButton ? 'subpage' : 'tab'}
+      title={title}
+      subtitle={subtitle}
+      showBackButton={showBackButton}
+      onBack={onBack}
+      fallbackRoute={fallbackRoute}
+      showBrand={showBrand}
+      showStatusPill={showStatusPill}
+      showThemeToggle={showThemeToggle}
+      showNotifications={showNotifications}
+      rightActions={rightComponent}
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-    width: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPlaceholder: {
-    width: 40,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'left',
-  },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
-});
+export { AppHeader } from './AppHeader';

@@ -3,6 +3,7 @@ import { Modal, StyleSheet, View, Text, Pressable, Dimensions, Image as RNImage,
 import { Feather } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ImageCropperModalProps {
   visible: boolean;
@@ -17,6 +18,7 @@ const BORDER_WIDTH = width; // Large enough to cover the rest of the screen
 
 export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: ImageCropperModalProps) {
   const { colors } = useTheme();
+  const { t, isRTL } = useLanguage();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [scale, setScale] = useState(1);
@@ -137,11 +139,11 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, isRTL && { flexDirection: 'row-reverse' }]}>
           <Pressable onPress={onClose} style={styles.iconBtn}>
-            <Feather name="chevron-left" size={24} color={colors.text} />
+            <Feather name={isRTL ? 'chevron-right' : 'chevron-left'} size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Preview</Text>
+          <Text style={styles.title}>{t('cropper.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -168,12 +170,12 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
             </Animated.View>
           </View>
           
-          <View style={styles.overlay} pointerEvents="none">
+          <View style={[styles.overlay, { pointerEvents: 'none' }]}>
             <View style={styles.mask} />
           </View>
 
           <View style={styles.controls}>
-            <View style={styles.zoomControls}>
+            <View style={[styles.zoomControls, isRTL && { flexDirection: 'row-reverse' }]}>
               <Pressable onPress={handleZoomOut} style={styles.zoomBtn}>
                 <Feather name="minus" size={20} color={colors.text} />
               </Pressable>
@@ -181,15 +183,15 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
                 <Feather name="plus" size={20} color={colors.text} />
               </Pressable>
               <Pressable onPress={handleReset} style={styles.resetBtn}>
-                <Text style={styles.resetText}>Reset</Text>
+                <Text style={styles.resetText}>{t('cropper.reset')}</Text>
               </Pressable>
             </View>
           </View>
         </View>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, isRTL && { flexDirection: 'row-reverse' }]}>
           <Pressable style={styles.selectBtn} onPress={onClose}>
-            <Text style={styles.selectText}>Select another photo</Text>
+            <Text style={styles.selectText}>{t('cropper.selectAnother')}</Text>
           </Pressable>
           <Pressable 
             style={[styles.confirmBtn, processing && { opacity: 0.7 }]} 
@@ -199,7 +201,7 @@ export function ImageCropperModal({ visible, imageUri, onClose, onConfirm }: Ima
             {processing ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.confirmText}>Confirm</Text>
+              <Text style={styles.confirmText}>{t('cropper.confirm')}</Text>
             )}
           </Pressable>
         </View>
@@ -248,7 +250,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

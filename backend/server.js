@@ -309,43 +309,52 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/profiles');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, req.user.id + '-' + uniqueSuffix + ext);
   }
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
+    const isImage =
+      (file.mimetype && file.mimetype.startsWith('image/')) ||
+      /\.(jpeg|jpg|png|gif|webp)$/i.test(file.originalname) ||
+      file.originalname === 'blob' ||
+      file.originalname === 'profile.jpg';
 
-    if (mimetype && extname) {
-      return cb(null, true);
+    if (isImage) {
+      cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'));
+      cb(new Error('Seules les images sont autorisées (JPEG, PNG, WEBP).'));
     }
   }
 });
 
-app.post('/user/profile/upload', authenticateToken, upload.single('avatar'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'No image uploaded' });
-  }
-
-  const avatarUrl = `/uploads/profiles/${req.file.filename}`;
-  
-  db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id], (err) => {
+app.post('/user/profile/upload', authenticateToken, (req, res) => {
+  upload.single('avatar')(req, res, (err) => {
     if (err) {
-      console.error('Avatar Update Error:', err);
-      return res.status(500).json({ message: 'Database error while saving avatar' });
+      console.error('Avatar Multer Error:', err);
+      return res.status(400).json({ message: err.message || 'Erreur lors du traitement de l\'image' });
     }
-    res.json({ message: 'Avatar updated successfully', avatar_url: avatarUrl });
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucune image reçue' });
+    }
+
+    const avatarUrl = `/uploads/profiles/${req.file.filename}`;
+
+    db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, req.user.id], (dbErr) => {
+      if (dbErr) {
+        console.error('Avatar Database Error:', dbErr);
+        return res.status(500).json({ message: 'Erreur base de données lors de la sauvegarde de l\'avatar' });
+      }
+      res.json({ message: 'Avatar mis à jour avec succès', avatar_url: avatarUrl });
+    });
   });
 });
 
@@ -391,6 +400,104 @@ app.put('/user/profile', authenticateToken, (req, res) => {
         return res.status(500).json({ message: 'Database error' });
       }
       res.json({ message: 'Profile updated successfully' });
+    });
+  });
+});
+
+/* ====================================================
+   DASHBOARD STATS & ACTIVITIES
+==================================================== */
+app.get('/api/dashboard', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  let userId = 1;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded && decoded.id) {
+        userId = decoded.id;
+      }
+    } catch (e) {}
+  }
+
+  const statsQuery = `
+    SELECT 
+      COUNT(DISTINCT c.id) AS totalClients,
+      COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) AS totalCredit,
+      COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS totalPaid
+    FROM clients c
+    LEFT JOIN client_transactions t ON c.id = t.client_id
+    WHERE c.user_id = ?
+  `;
+
+  const activitiesQuery = `
+    SELECT 
+      t.id, 
+      t.client_id, 
+      c.name AS client_name, 
+      CASE WHEN t.type = 'payment' THEN 'paiement' ELSE 'credit' END AS type, 
+      t.amount, 
+      t.description, 
+      t.created_at
+    FROM client_transactions t
+    JOIN clients c ON t.client_id = c.id
+    WHERE t.user_id = ?
+    ORDER BY t.date DESC, t.id DESC
+    LIMIT 10
+  `;
+
+  const clientsQuery = `
+    SELECT 
+      c.id, c.name, c.phone, c.created_at,
+      COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) - 
+      COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS credit,
+      COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS total_paid
+    FROM clients c
+    LEFT JOIN client_transactions t ON c.id = t.client_id
+    WHERE c.user_id = ?
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+    LIMIT 5
+  `;
+
+  db.query(statsQuery, [userId], (err1, statsRes) => {
+    if (err1) {
+      console.error('Dashboard stats error:', err1);
+      return res.status(500).json({ error: err1.message });
+    }
+
+    db.query(activitiesQuery, [userId], (err2, actRes) => {
+      if (err2) {
+        console.error('Dashboard activities error:', err2);
+        return res.status(500).json({ error: err2.message });
+      }
+
+      db.query(clientsQuery, [userId], (err3, clientRes) => {
+        if (err3) {
+          console.error('Dashboard clients error:', err3);
+          return res.status(500).json({ error: err3.message });
+        }
+
+        const stats = statsRes[0] || { totalClients: 0, totalPaid: 0, totalCredit: 0 };
+        return res.json({
+          success: true,
+          stats: {
+            totalClients: Number(stats.totalClients) || 0,
+            totalPaid: Number(stats.totalPaid) || 0,
+            totalCredit: Number(stats.totalCredit) || 0,
+          },
+          recentActivities: (actRes || []).map(a => ({
+            ...a,
+            amount: Number(a.amount) || 0
+          })),
+          recentClients: (clientRes || []).map(c => ({
+            ...c,
+            credit: Number(c.credit) || 0,
+            total_paid: Number(c.total_paid) || 0
+          }))
+        });
+      });
     });
   });
 });

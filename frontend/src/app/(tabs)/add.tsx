@@ -6,6 +6,8 @@ import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { ClientModal, ClientData } from '@/components/ClientModal';
 import { TransactionModal } from '@/components/TransactionModal';
 
@@ -13,6 +15,7 @@ export default function QuickActionsScreen() {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const isDark = theme === 'dark';
 
   const [clients, setClients] = useState<ClientData[]>([]);
@@ -36,15 +39,16 @@ export default function QuickActionsScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#0A0E17' : '#F8FAFC' }]} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Actions Rapides</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enregistrez instantanément une opération financière
-          </Text>
-        </View>
+      {/* Universal Modern Header */}
+      <AppHeader
+        variant="tab"
+        title={t('quickActions.title')}
+        subtitle={t('quickActions.subtitle')}
+        showBrand={true}
+        showStatusPill={true}
+      />
 
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* 3 Action Cards */}
         <View style={styles.cardsContainer}>
           {/* 1. Ajouter un client */}
@@ -69,9 +73,11 @@ export default function QuickActionsScreen() {
                 <Feather name="user-plus" size={24} color={colors.primary} />
               </View>
               <View style={styles.actionInfo}>
-                <Text style={[styles.actionTitle, { color: colors.text }]}>Ajouter un client</Text>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>
+                  {t('quickActions.addClient')}
+                </Text>
                 <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-                  Créez une nouvelle fiche client avec nom et téléphone
+                  {t('quickActions.addClientDesc')}
                 </Text>
               </View>
               <View style={[styles.actionArrowCircle, { backgroundColor: isDark ? '#1F2736' : '#F1F5F9' }]}>
@@ -105,9 +111,11 @@ export default function QuickActionsScreen() {
                 <Feather name="plus-circle" size={24} color="#F97316" />
               </View>
               <View style={styles.actionInfo}>
-                <Text style={[styles.actionTitle, { color: colors.text }]}>Ajouter un crédit</Text>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>
+                  {t('quickActions.addCredit')}
+                </Text>
                 <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-                  Enregistrez des achats à crédit pour un client
+                  {t('quickActions.addCreditDesc')}
                 </Text>
               </View>
               <View style={[styles.actionArrowCircle, { backgroundColor: isDark ? '#1F2736' : '#F1F5F9' }]}>
@@ -141,9 +149,11 @@ export default function QuickActionsScreen() {
                 <FontAwesome5 name="hand-holding-usd" size={20} color="#10B981" />
               </View>
               <View style={styles.actionInfo}>
-                <Text style={[styles.actionTitle, { color: colors.text }]}>Enregistrer un paiement</Text>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>
+                  {t('quickActions.recordPayment')}
+                </Text>
                 <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-                  Déduisez un versement ou remboursement de la dette
+                  {t('quickActions.recordPaymentDesc')}
                 </Text>
               </View>
               <View style={[styles.actionArrowCircle, { backgroundColor: isDark ? '#1F2736' : '#F1F5F9' }]}>
@@ -167,7 +177,7 @@ export default function QuickActionsScreen() {
           >
             <Feather name="users" size={17} color={colors.primary} />
             <Text style={[styles.exploreShortcutText, { color: colors.primary }]}>
-              Voir tous les clients dans l'Explorateur
+              {t('quickActions.viewAllInExplorer')}
             </Text>
           </Pressable>
         </Animatable.View>

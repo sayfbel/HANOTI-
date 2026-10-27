@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type User = {
+export type User = {
   id: string;
   email: string;
   first_name: string;
@@ -9,6 +9,7 @@ type User = {
   birthday?: string;
   phone_number?: string;
   avatar_url?: string;
+  custom_id?: string;
   [key: string]: any;
 };
 
@@ -18,6 +19,8 @@ type AuthContextType = {
   isLoading: boolean;
   signIn: (userData: User, tokenData: string, rememberMe: boolean) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  updateUser: (updatedFields: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +29,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchLiveProfile = async (authToken: string) => {
+    try {
+      const res = await fetch('http://localhost:3000/user/profile', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const freshUser = await res.json();
+        if (freshUser && freshUser.email) {
+          setUser((prev) => {
+            const merged = { ...(prev || {}), ...freshUser };
+            AsyncStorage.setItem('user', JSON.stringify(merged)).catch(() => {});
+            return merged;
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore background refresh errors
+    }
+  };
 
   useEffect(() => {
     const loadStorageData = async () => {
@@ -38,8 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (rememberMe === 'true') {
             setToken(storedToken);
             setUser(JSON.parse(storedUser));
+            // Silently refresh profile from server to get latest avatar & details
+            fetchLiveProfile(storedToken);
           } else {
-            // They didn't select 'remember me', so clear their session on app start
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('user');
             await AsyncStorage.removeItem('rememberMe');
@@ -55,6 +79,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadStorageData();
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const activeToken = token || (await AsyncStorage.getItem('token'));
+    if (activeToken) {
+      await fetchLiveProfile(activeToken);
+    }
+  }, [token]);
+
+  const updateUser = useCallback(async (updatedFields: Partial<User>) => {
+    setUser((prev) => {
+      const merged = prev ? { ...prev, ...updatedFields } : (updatedFields as User);
+      AsyncStorage.setItem('user', JSON.stringify(merged)).catch(() => {});
+      return merged;
+    });
+  }, []);
+
   const signIn = async (userData: User, tokenData: string, rememberMe: boolean) => {
     setUser(userData);
     setToken(tokenData);
@@ -62,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       await AsyncStorage.setItem('token', tokenData);
       await AsyncStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+      // Fetch fresh profile in case server has additional fields like avatar_url
+      fetchLiveProfile(tokenData);
     } catch (error) {
       console.error('Failed to save auth state', error);
     }
@@ -80,7 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, signIn, signOut, refreshUser, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -93,3 +136,4 @@ export function useAuth() {
   }
   return context;
 }
+
